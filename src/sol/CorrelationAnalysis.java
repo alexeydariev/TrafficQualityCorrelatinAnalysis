@@ -24,7 +24,7 @@ public class CorrelationAnalysis {
 	}
 	
 	public void main(){
-		String date="20131213";
+		String date="20131212";
 		HashMap<String, Market> tmcToMarket=new HashMap<String, Market>();
 		HashMap<String, Market> markets=readGroundTruth(tmcToMarket, date);
 		
