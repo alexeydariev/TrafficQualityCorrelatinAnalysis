@@ -1,0 +1,88 @@
+========
+========
+========
+========
+========
+========
+01/20/2014 16:25:42: java.lang.NullPointerException
+	at com.here.traffic.quality.downloadprobes.App.loadData(App.java:161)
+	at com.here.traffic.quality.downloadprobes.App.main(App.java:100)
+
+========
+01/21/2014 09:38:07: Probe data 1/1 loaded successfully.
+========
+01/21/2014 11:13:21: Probe data 1/1 loaded successfully.
+========
+01/21/2014 11:41:34: Probe data 1/1 loaded successfully.
+========
+01/21/2014 12:00:08: Probe data 1/1 loaded successfully.
+========
+01/21/2014 12:08:15: Probe data 1/1 loaded successfully.
+========
+01/21/2014 12:27:10: Probe data 1/1 loaded successfully.
+========
+01/21/2014 13:17:20: java.io.FileNotFoundException: E:\workspace\java\TrafficQualityCorrelatinAnalysis\bin\20131212_null0,1,2,3,45,6,7,8,910,11,12,13,1415,16,17,18,1920,21,22,23,2425,26,27,28,2930,31,32,33,3435,36,37,38,3940,41,42,43,4445,46,47,48,4950,51,52,53,5455,56,57,58,5960,61,62,63,6465,66,67,68,6970,71,72,73,7475,76,77,78,7980,81,82,83,8485,86,87,88,8990,91,92,93,9495,96,97,98,99100,101,102,103,104105,106,107,108,109110,111,112,113,114115,116,117,118,119120,121,122,123,124125,126,127,128,129130,131,132,133,134135,136,137,138,139140,141,142,143,144145,146,147,148,149_probe.csv (The filename, directory name, or volume label syntax is incorrect)
+	at java.io.FileOutputStream.open(Native Method)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:221)
+	at com.here.traffic.quality.SqlQuery.executeExtractLoad(SqlQuery.java:163)
+	at com.here.traffic.quality.downloadprobes.App.loadData(App.java:216)
+	at com.here.traffic.quality.downloadprobes.App.main(App.java:114)
+
+01/21/2014 13:17:20: Problem with probe-data load. Process failed.
+01/21/2014 13:57:05: Probe data 1/1 loaded successfully.
+========
+01/21/2014 14:48:38: Probe data 1/1 loaded successfully.
+01/21/2014 15:04:03: Probe data 1/1 loaded successfully.
+01/21/2014 15:06:07: Probe data 1/1 loaded successfully.
+01/21/2014 15:30:21: Probe data 1/1 loaded successfully.
+01/21/2014 15:41:04: Probe data 1/1 loaded successfully.
+01/21/2014 15:44:30: Probe data 1/1 loaded successfully.
+01/21/2014 15:55:22: Probe data 1/1 loaded successfully.
+01/21/2014 16:07:48: Probe data 1/1 loaded successfully.
+01/21/2014 16:18:25: Probe data 1/1 loaded successfully.
+01/21/2014 16:26:06: Probe data 1/1 loaded successfully.
+01/21/2014 16:40:42: Probe data 1/1 loaded successfully.
+01/21/2014 16:45:17: Probe data 1/1 loaded successfully.
+01/21/2014 16:50:17: Probe data 1/1 loaded successfully.
+01/21/2014 16:54:51: Probe data 1/1 loaded successfully.
+========
+01/22/2014 09:45:34: Probe data 1/1 loaded successfully.
+01/22/2014 09:53:24: Probe data 1/1 loaded successfully.
+01/22/2014 10:01:59: Probe data 1/1 loaded successfully.
+01/22/2014 10:10:28: Probe data 1/1 loaded successfully.
+01/22/2014 10:15:02: Probe data 1/1 loaded successfully.
+01/22/2014 10:24:03: Probe data 1/1 loaded successfully.
+01/22/2014 10:28:56: Probe data 1/1 loaded successfully.
+01/22/2014 10:35:33: Probe data 1/1 loaded successfully.
+01/22/2014 10:39:10: Probe data 1/1 loaded successfully.
+01/22/2014 10:44:00: Probe data 1/1 loaded successfully.
+01/22/2014 10:48:04: Probe data 1/1 loaded successfully.
+========
+01/22/2014 10:50:34: Probe data 1/1 loaded successfully.
+========
+========
+========
+01/22/2014 14:27:58: Probe data 1/1 loaded successfully.
+01/22/2014 14:31:10: Probe data 1/1 loaded successfully.
+01/22/2014 14:43:22: Probe data 1/1 loaded successfully.
+01/22/2014 14:44:20: Probe data 1/1 loaded successfully.
+01/22/2014 14:52:51: Probe data 1/1 loaded successfully.
+01/22/2014 14:54:23: Probe data 1/1 loaded successfully.
+01/22/2014 14:58:59: Probe data 1/1 loaded successfully.
+01/22/2014 15:05:33: Probe data 1/1 loaded successfully.
+========
+01/22/2014 15:19:42: Probe data 1/1 loaded successfully.
+01/22/2014 15:32:37: Probe data 1/1 loaded successfully.
+========
+01/22/2014 17:16:01: Probe data 1/1 loaded successfully.
+01/22/2014 17:19:31: Probe data 1/1 loaded successfully.
+01/22/2014 17:37:25: Probe data 1/1 loaded successfully.
+01/22/2014 17:39:32: Probe data 1/1 loaded successfully.
+01/22/2014 17:45:36: Probe data 1/1 loaded successfully.
+01/22/2014 17:49:13: Probe data 1/1 loaded successfully.
+01/22/2014 17:55:33: Probe data 1/1 loaded successfully.
+01/22/2014 18:03:56: Probe data 1/1 loaded successfully.
+========
+01/22/2014 18:14:58: Probe data 1/1 loaded successfully.
+01/22/2014 18:23:24: Probe data 1/1 loaded successfully.
+========

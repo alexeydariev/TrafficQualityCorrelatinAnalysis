@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="libs/junit-4.11.jar"/>
+	<classpathentry kind="lib" path="libs/nzjdbc.jar"/>
+	<classpathentry kind="lib" path="libs/ojdbc14_g.jar"/>
+	<classpathentry kind="lib" path="libs/quality-1.0-stand-alone.jar"/>
+	<classpathentry kind="lib" path="libs/quality-1.0.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
