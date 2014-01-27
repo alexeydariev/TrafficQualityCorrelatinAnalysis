@@ -6,6 +6,12 @@ public final class Constants {
 	 */
 	public static final String DATA_BASE_FOLDER="E:/workspace/java/TrafficQualityCorrelatinAnalysis/bin/";
 	
+	public static final String PROJECT_FOLDER="E:/workspace/java/TrafficQualityCorrelatinAnalysis/";
+	public static final String RAW_DATA=PROJECT_FOLDER+"raw_data/";
+	public static final String PROBE_STAT_DATA=PROJECT_FOLDER+"stat_data/";
+	public static final String MAP_DATA=PROJECT_FOLDER+"map_data/";
+	
+	
 	
 	/**
 	 * Raw probe data field index
