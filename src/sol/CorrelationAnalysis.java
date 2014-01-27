@@ -39,13 +39,14 @@ public class CorrelationAnalysis {
 				return false;
 			}
 		});
-	
+		
 
 		for(File statFile: files){
 			//String filepath=Constants.DATA_BASE_FOLDER+"STAT_20131212_6,7,8_probe.csv";
 			readStatProbeFile(markets, tmcToMarket, statFile.getAbsolutePath());
 		}
 		try{
+
 			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+"bin/"+date+".csv");
 			for(String name: markets.keySet()){
 				Market market=markets.get(name);
