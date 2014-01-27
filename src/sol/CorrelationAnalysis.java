@@ -45,7 +45,7 @@ public class CorrelationAnalysis {
 			readStatProbeFile(markets, tmcToMarket, statFile.getAbsolutePath());
 		}
 		try{
-			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+date+".csv");
+			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+"bin/"+date+".csv");
 			for(String name: markets.keySet()){
 				Market market=markets.get(name);
 				XAXisMetric metric=market.densityMetrics;
