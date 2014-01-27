@@ -24,24 +24,28 @@ class XAXisMetric{
 
 class YAxisMetric{
 	public double qualityScore; //just for one day
+	
 	public YAxisMetric(double qs){
 		qualityScore=qs;
 	}
 }
 
-/*class Conditon{
+class Conditon{
 	public String timePeriod;
 	public String engine;
+	public String roadCondition;
+	
+	
 	public Conditon(String engine){
 		this.engine=engine;
 	}
 	public String toString(){
-		return engine;
+		return engine+" "+timePeriod+" "+roadCondition;
 	}
 	public boolean equals(Object other){
 		return engine.equals(((Conditon)other).engine);
 	}
-}*/
+}
 
 
 public class Market {

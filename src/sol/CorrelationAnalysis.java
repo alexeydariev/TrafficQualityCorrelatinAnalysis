@@ -25,8 +25,9 @@ public class CorrelationAnalysis {
 	
 	public void main(){
 		String date="20131212";
-		HashMap<String, Market> tmcToMarket=new HashMap<String, Market>();
-		HashMap<String, Market> markets=readGroundTruth(tmcToMarket, date);
+		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0"); 
+		HashMap<String, Market> markets=readGroundTruth(date);
+		
 		
 
 		File baseFolder=new File(Constants.PROBE_STAT_DATA+date+"/");
@@ -113,7 +114,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public void readStatProbeFile(HashMap<String, Market> markets,HashMap<String,Market> tmcToMarket,String filepath){
+	public void readStatProbeFile(HashMap<String, Market> markets,HashMap<String,String> tmcToMarket,String filepath){
 		String tmc=null;
 		try{
 			Scanner sc=new Scanner(new File(filepath));
@@ -124,7 +125,7 @@ public class CorrelationAnalysis {
 				tmc=fields[0].trim();
 				
 				if(tmcToMarket.containsKey(tmc)){
-					Market market=tmcToMarket.get(tmc);
+					Market market=markets.get(tmcToMarket.get(tmc));
 					XAXisMetric metric=market.densityMetrics;
 					metric.sumOfProbes+=Integer.parseInt(fields[1]);
 					metric.sumOfVehicles+=Integer.parseInt(fields[2]);
@@ -137,7 +138,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public HashMap<String, Market> readGroundTruth(HashMap<String, Market> tmcToMarket, String date){
+	public HashMap<String, Market> readGroundTruth(String date){
 		HashMap<String, Market> markets=new HashMap<String, Market>();
 		try{
 			Scanner sc=new Scanner(new File(Constants.PROBE_STAT_DATA+date+"/ground_truth_"+date+".txt"));
@@ -159,12 +160,9 @@ public class CorrelationAnalysis {
 				market.tmcs.add(tmc);
 				market.qualityMetrics.get(engine).qualityScore=Double.parseDouble(fields[2]);
 				
-				//System.out.println(market.toString());
-				if(!tmcToMarket.containsKey(tmc)){
-					tmcToMarket.put(tmc, market);
-				}
+				
 			}
-			System.out.println("# of markets="+markets.size()+"\n# of total tmc's="+tmcToMarket.size());
+			System.out.println("# of markets="+markets.size());
 			/*for(String market: markets.keySet()){
 				System.out.println(market+"  "+markets.get(market).tmcs.size());
 			}*/
@@ -172,6 +170,32 @@ public class CorrelationAnalysis {
 			ex.printStackTrace();
 		}
 		return markets;
+	}
+	
+	public HashMap<String, String> loadTMCToMarket(String extendCountryCode){
+		HashMap<String, String> tmcToMarket=new HashMap<String, String>();
+		try{
+			BufferedReader br = new BufferedReader(new FileReader(Constants.MAP_DATA+"tmc_market.txt"));
+			String line;
+			while ((line = br.readLine()) != null) {
+				String[] fields=line.split(",");
+				if(!fields[1].equals(extendCountryCode)) continue;
+				int marketNameIdx=-1;
+				switch (extendCountryCode) {
+				case "A0":
+					marketNameIdx=14;
+					break;
+				default:
+					break;
+				}
+				String tmc=fields[0],  market=fields[marketNameIdx];
+				tmcToMarket.put(tmc, market);
+			}
+			br.close();
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		return tmcToMarket;
 	}
 	
 	
