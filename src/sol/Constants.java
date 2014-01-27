@@ -4,14 +4,12 @@ public final class Constants {
 	/**
 	 * Directory setting
 	 */
-	public static final String DATA_BASE_FOLDER="E:/workspace/java/TrafficQualityCorrelatinAnalysis/bin/";
-	
 	public static final String PROJECT_FOLDER="E:/workspace/java/TrafficQualityCorrelatinAnalysis/";
 	
 	public static final String DATA_FOLDER=PROJECT_FOLDER+"data/";
-	public static final String PROBE_RAW_DATA=PROJECT_FOLDER+"raw/";
-	public static final String PROBE_STAT_DATA=PROJECT_FOLDER+"stat/";
-	public static final String MAP_DATA=PROJECT_FOLDER+"map/";
+	public static final String PROBE_RAW_DATA=DATA_FOLDER+"raw/";
+	public static final String PROBE_STAT_DATA=DATA_FOLDER+"stat/";
+	public static final String MAP_DATA=DATA_FOLDER+"map/";
 	
 	
 	

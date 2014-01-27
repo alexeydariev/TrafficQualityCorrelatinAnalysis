@@ -29,7 +29,7 @@ public class CorrelationAnalysis {
 		HashMap<String, Market> markets=readGroundTruth(tmcToMarket, date);
 		
 
-		File baseFolder=new File(Constants.DATA_BASE_FOLDER+date+"/");
+		File baseFolder=new File(Constants.PROBE_STAT_DATA+date+"/");
 		File[] files=baseFolder.listFiles(new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
@@ -45,7 +45,7 @@ public class CorrelationAnalysis {
 			readStatProbeFile(markets, tmcToMarket, statFile.getAbsolutePath());
 		}
 		try{
-			FileWriter fw=new FileWriter(Constants.DATA_BASE_FOLDER+date+".csv");
+			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+date+".csv");
 			for(String name: markets.keySet()){
 				Market market=markets.get(name);
 				XAXisMetric metric=market.densityMetrics;
@@ -69,7 +69,7 @@ public class CorrelationAnalysis {
 		String line="";
 		try{
 			//analyze 
-			String filePath=Constants.DATA_BASE_FOLDER+fileName;
+			String filePath=Constants.PROBE_RAW_DATA+fileName;
 			BufferedReader br = new BufferedReader(new FileReader(filePath));
 			int cnt=0;
 			while ((line = br.readLine()) != null) {
@@ -98,7 +98,7 @@ public class CorrelationAnalysis {
 			br.close();
 			
 			//output the stats to a file
-			FileWriter fw=new FileWriter(Constants.DATA_BASE_FOLDER+"STAT_"+fileName);
+			FileWriter fw=new FileWriter(Constants.PROBE_RAW_DATA+"STAT_"+fileName);
 			for(String tmc: probeCnts.keySet()){
 				fw.write(tmc+","+probeCnts.get(tmc)+","+vehicleCnts.get(tmc).size()+","+providerCnts.get(tmc).size()+
 			"\n");
@@ -138,7 +138,7 @@ public class CorrelationAnalysis {
 	public HashMap<String, Market> readGroundTruth(HashMap<String, Market> tmcToMarket, String date){
 		HashMap<String, Market> markets=new HashMap<String, Market>();
 		try{
-			Scanner sc=new Scanner(new File(Constants.DATA_BASE_FOLDER+date+"/ground_truth.csv"));
+			Scanner sc=new Scanner(new File(Constants.PROBE_STAT_DATA+date+"/ground_truth_"+date+".txt"));
 			while(sc.hasNextLine()){
 				String[] fields=sc.nextLine().split(",");
 				if(!fields[fields.length-1].equals("ALL DAY")) continue;
@@ -175,7 +175,7 @@ public class CorrelationAnalysis {
 	
 	public void loadStatFilesToNetezza(){
 		try{
-			Scanner sc=new Scanner(new File(Constants.DATA_BASE_FOLDER+"temp.txt"));
+			Scanner sc=new Scanner(new File(Constants.PROJECT_FOLDER+"temp.txt"));
 			HashMap<String, Integer> probeCnts=new HashMap<String, Integer>();
 			HashMap<String, HashSet<String>> vehicleCnts=new HashMap<String, HashSet<String>>();
 			while(sc.hasNextLine()){
