@@ -11,8 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -24,9 +22,10 @@ public class CorrelationAnalysis {
 	}
 	
 	public void main(){
-		String date="20131212";
-		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0"); 
+		String date="20131220";
 		HashMap<String, Market> markets=readGroundTruth(date);
+		for(Market market: markets.values()) System.out.println(market);		
+		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", markets); 
 		
 		
 
@@ -127,11 +126,16 @@ public class CorrelationAnalysis {
 				if(tmcToMarket.containsKey(tmc)){
 					Market market=markets.get(tmcToMarket.get(tmc));
 					XAXisMetric metric=market.densityMetrics;
-					metric.sumOfProbes+=Integer.parseInt(fields[1]);
-					metric.sumOfVehicles+=Integer.parseInt(fields[2]);
+					int probeCnt=Integer.parseInt(fields[1]);
+					metric.sumOfProbes+=probeCnt;
+					if(probeCnt>Constants.PROBE_CNT_THRSHOLD) metric.noOfTMCsWithProbeCntOverThreshold+=1;
+					int vehicleCnt=Integer.parseInt(fields[2]);
+					metric.sumOfVehicles+=vehicleCnt;
+					if(vehicleCnt>Constants.VEHICLE_CNT_THRESHOLD) metric.noOfTMCsWithVehicleCntOverThreshold+=1;
 					metric.sumOfProviders+=Integer.parseInt(fields[3]);
 				}
 			}
+			sc.close();
 		}catch(Exception ex){
 			System.out.println("tmc="+tmc);
 			ex.printStackTrace();
@@ -144,11 +148,10 @@ public class CorrelationAnalysis {
 			Scanner sc=new Scanner(new File(Constants.PROBE_STAT_DATA+date+"/ground_truth_"+date+".txt"));
 			while(sc.hasNextLine()){
 				String[] fields=sc.nextLine().split(",");
-				if(!fields[fields.length-1].equals("ALL DAY")) continue;
 				
-				String engine=fields[6].trim();
+				if(!fields[Constants.IDX_TIME_PERIOD].equals("ALL DAY")) continue;
 				
-				String marketName=fields[0].replace("\\", "");
+				String marketName=fields[Constants.IDX_MARKET].replace("\\", "");
 				Market market;
 				if(!markets.containsKey(marketName)){
 					market=new Market(marketName);
@@ -156,23 +159,22 @@ public class CorrelationAnalysis {
 				}else{
 					market=markets.get(marketName);
 				}
-				String tmc=fields[3].trim();
-				market.tmcs.add(tmc);
-				market.qualityMetrics.get(engine).qualityScore=Double.parseDouble(fields[2]);
 				
-				
+				String engine=fields[Constants.IDX_ENGINE_TYPE].trim(), timePeriod=fields[Constants.IDX_TIME_PERIOD];
+				Conditon condition=new Conditon(engine, timePeriod, "ALL");
+				market.qualityMetrics.put(condition, new YAxisMetric(Double.parseDouble(fields[Constants.IDX_ROAD_CONDITION_ALL])));
+				condition=new Conditon(engine, timePeriod, "Congestion");
+				market.qualityMetrics.put(condition, new YAxisMetric(Double.parseDouble(fields[Constants.IDX_ROAD_CONDITION_CONGESTION])));
 			}
 			System.out.println("# of markets="+markets.size());
-			/*for(String market: markets.keySet()){
-				System.out.println(market+"  "+markets.get(market).tmcs.size());
-			}*/
+			sc.close();
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
 		return markets;
 	}
 	
-	public HashMap<String, String> loadTMCToMarket(String extendCountryCode){
+	public HashMap<String, String> loadTMCToMarket(String extendCountryCode, HashMap<String, Market> markets){
 		HashMap<String, String> tmcToMarket=new HashMap<String, String>();
 		try{
 			BufferedReader br = new BufferedReader(new FileReader(Constants.MAP_DATA+"tmc_market.txt"));
@@ -190,6 +192,7 @@ public class CorrelationAnalysis {
 				}
 				String tmc=fields[0],  market=fields[marketNameIdx];
 				tmcToMarket.put(tmc, market);
+				markets.get(market).tmcs.add(tmc);				
 			}
 			br.close();
 		}catch(Exception ex){
@@ -213,6 +216,8 @@ public class CorrelationAnalysis {
 				vehicleCnts.get(tmc).add(fields[Constants.IDX_PROBE_ID]);
 			}
 			Connection netezza=initilize("Netezza");
+			sc.close();
+			netezza.close();
 			//insertTMCDensityData(netezza, probeCnts, vehicleCnts);
 		}catch(Exception ex){
 			ex.printStackTrace();

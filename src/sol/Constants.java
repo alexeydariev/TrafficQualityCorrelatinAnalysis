@@ -12,7 +12,24 @@ public final class Constants {
 	public static final String MAP_DATA=DATA_FOLDER+"map/";
 	
 	
+	/**
+	 * Ground truh data field index
+	 */
+	public static final int IDX_CONTINENT=0;
+	public static final int IDX_COUNTRY=1;
+	public static final int IDX_MARKET=2;
+	public static final int IDX_ENGINE_TYPE=4;
+	public static final int IDX_DATE=5;
+	public static final int IDX_TIME_PERIOD=6;
+	public static final int IDX_ROAD_CONDITION_ALL=7;
+	public static final int IDX_ROAD_CONDITION_CONGESTION=8;
 	
+	/**
+	 * Threshold
+	 */
+	public static final int PROBE_CNT_THRSHOLD=10;
+	public static final int VEHICLE_CNT_THRESHOLD=3;
+
 	/**
 	 * Raw probe data field index
 	 */
