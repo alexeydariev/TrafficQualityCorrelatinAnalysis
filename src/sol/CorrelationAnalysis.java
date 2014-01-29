@@ -22,6 +22,26 @@ public class CorrelationAnalysis {
 	}
 	
 	public void main(){
+		secondAttempt();
+		thirdAttempt();
+		//readProbeFileOutputStats("20131212_6,7,8_probe.csv");
+	}
+	
+	public void thirdAttempt(){
+		try{
+			String date="20131220";
+			BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+date));
+			String line;
+			while((line=br.readLine())!=null){
+				
+			}
+			br.close();
+		}catch(Exception ex){
+			
+		}
+	}
+	
+	public void secondAttempt(){
 		String date="20131213";
 		HashMap<String, Market> markets=readGroundTruth(date);
 		//for(Market market: markets.values()) System.out.println(market);		
@@ -57,9 +77,6 @@ public class CorrelationAnalysis {
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
-		
-		
-		//readProbeFileOutputStats("20131212_6,7,8_probe.csv");
 	}
 	
 	public void readProbeFileOutputStats(String fileName){
