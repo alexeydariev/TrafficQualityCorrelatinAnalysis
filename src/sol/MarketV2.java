@@ -29,13 +29,13 @@ class YAxisMetric{
 	}
 }
 
-class Conditon{
+class ConditonV2{
 	public String timePeriod;
 	public String engine;
 	public String roadCondition;
 	
 	
-	public Conditon(String engine, String timePeriod, String roadCondition){
+	public ConditonV2(String engine, String timePeriod, String roadCondition){
 		this.engine=engine;
 		this.timePeriod=timePeriod;
 		this.roadCondition=roadCondition;
@@ -53,12 +53,12 @@ public class MarketV2 {
 	
 	//public Conditon conditon;
 	public XAXisMetric densityMetrics;
-	public HashMap<Conditon, YAxisMetric> qualityMetrics;
+	public HashMap<ConditonV2, YAxisMetric> qualityMetrics;
 	
 	public MarketV2(String market){
 		name=market;
 		tmcs=new HashSet<String>();
-		qualityMetrics=new HashMap<Conditon, YAxisMetric>();
+		qualityMetrics=new HashMap<ConditonV2, YAxisMetric>();
 		densityMetrics=new XAXisMetric();
 	}
 	
@@ -67,7 +67,7 @@ public class MarketV2 {
 		marketString+=","+String.format("%.3f", densityMetrics.avgProbeCntPerTMC)+","+String.format("%.3f", densityMetrics.avgVehicleCntPerTMC)
 				+","+densityMetrics.noOfTMCsWithProbeCntOverThreshold+","+densityMetrics.noOfTMCsWithVehicleCntOverThreshold;
 		
-		for(Conditon condition:qualityMetrics.keySet()){
+		for(ConditonV2 condition:qualityMetrics.keySet()){
 			YAxisMetric yMetric=qualityMetrics.get(condition);
 			marketString+=","+String.format("%.3f", yMetric.qualityScore);
 		}
