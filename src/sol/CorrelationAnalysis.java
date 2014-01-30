@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -29,6 +30,12 @@ public class CorrelationAnalysis {
 	
 	public void thirdAttempt(){
 		try{
+			HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", null); 
+			
+			
+			HashMap<String, MarketV3> markets=new HashMap<String, MarketV3>();
+			HashMap<Integer, ArrayList<EpochTMC>> epochTMCPairsIndexedByEpoch=new HashMap<Integer, ArrayList<EpochTMC>>();
+			//build up epochs
 			String date="20131220";
 			BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+date));
 			String line;
@@ -36,6 +43,31 @@ public class CorrelationAnalysis {
 				
 			}
 			br.close();
+			
+			/**
+			 * Calculate the stats
+			 */
+			for(int epochIdx=0;epochIdx<24*60/EpochTMC.EPOCH_DURATION;epochIdx++){
+				//for each epoch
+				for(MarketV3 market: markets.values()){
+					market.noOfCoveredTMCsInOneEpoch=0;
+					market.noOfTMCsInOneEpoch=0;
+					market.errorInOneEpoch=0;
+				}
+				for(EpochTMC pair: epochTMCPairsIndexedByEpoch.get(epochIdx)){
+					MarketV3 market= markets.get( tmcToMarket.get(pair.tmc) );
+					
+					market.noOfTMCsInOneEpoch+=1;
+					if(pair.covered) market.noOfCoveredTMCsInOneEpoch+=1;
+					market.errorInOneEpoch+=pair.error;
+				}
+				for(MarketV3 market: markets.values()){
+					market.coverages.add((market.noOfCoveredTMCsInOneEpoch+0.0)/market.noOfTMCsInOneEpoch);
+					market.errors.add(market.errorInOneEpoch/market.noOfTMCsInOneEpoch);
+				}
+			}
+			
+			
 		}catch(Exception ex){
 			
 		}
@@ -43,7 +75,7 @@ public class CorrelationAnalysis {
 	
 	public void secondAttempt(){
 		String date="20131213";
-		HashMap<String, Market> markets=readGroundTruth(date);
+		HashMap<String, MarketV2> markets=readGroundTruth(date);
 		//for(Market market: markets.values()) System.out.println(market);		
 		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", markets); 
 		
@@ -67,7 +99,7 @@ public class CorrelationAnalysis {
 
 			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+"bin/"+date+".csv");
 			for(String name: markets.keySet()){
-				Market market=markets.get(name);
+				MarketV2 market=markets.get(name);
 				XAXisMetric metric=market.densityMetrics;
 				metric.avgProbeCntPerTMC=metric.sumOfProbes/market.tmcs.size();
 				metric.avgVehicleCntPerTMC=metric.sumOfVehicles/market.tmcs.size();
@@ -128,7 +160,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public void readStatProbeFile(HashMap<String, Market> markets,HashMap<String,String> tmcToMarket,String filepath){
+	public void readStatProbeFile(HashMap<String, MarketV2> markets,HashMap<String,String> tmcToMarket,String filepath){
 		String tmc=null;
 		try{
 			Scanner sc=new Scanner(new File(filepath));
@@ -140,7 +172,7 @@ public class CorrelationAnalysis {
 				
 				if(tmcToMarket.containsKey(tmc)){
 					if(markets.containsKey(tmcToMarket.get(tmc))){
-						Market market=markets.get(tmcToMarket.get(tmc));
+						MarketV2 market=markets.get(tmcToMarket.get(tmc));
 						XAXisMetric metric=market.densityMetrics;
 						int probeCnt=Integer.parseInt(fields[1]);
 						metric.sumOfProbes+=probeCnt;
@@ -159,8 +191,8 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public HashMap<String, Market> readGroundTruth(String date){
-		HashMap<String, Market> markets=new HashMap<String, Market>();
+	public HashMap<String, MarketV2> readGroundTruth(String date){
+		HashMap<String, MarketV2> markets=new HashMap<String, MarketV2>();
 		try{
 			Scanner sc=new Scanner(new File(Constants.PROBE_STAT_DATA+date+"/ground_truth_"+date+".txt"));
 			while(sc.hasNextLine()){
@@ -169,9 +201,9 @@ public class CorrelationAnalysis {
 				if(!fields[Constants.IDX_TIME_PERIOD].equals("ALL DAY")) continue;
 				
 				String marketName=fields[Constants.IDX_MARKET].replace("\\", "");
-				Market market;
+				MarketV2 market;
 				if(!markets.containsKey(marketName)){
-					market=new Market(marketName);
+					market=new MarketV2(marketName);
 					markets.put(marketName, market);
 				}else{
 					market=markets.get(marketName);
@@ -191,7 +223,7 @@ public class CorrelationAnalysis {
 		return markets;
 	}
 	
-	public HashMap<String, String> loadTMCToMarket(String extendCountryCode, HashMap<String, Market> markets){
+	public HashMap<String, String> loadTMCToMarket(String extendCountryCode, HashMap<String, MarketV2> markets){
 		HashMap<String, String> tmcToMarket=new HashMap<String, String>();
 		try{
 			BufferedReader br;
@@ -224,7 +256,7 @@ public class CorrelationAnalysis {
 				}
 				String tmc=fields[0],  market=fields[marketNameIdx].replace("\\", "");
 				tmcToMarket.put(tmc, market);
-				if(markets.containsKey(market)) markets.get(market).tmcs.add(tmc);				
+				if(markets!=null&&markets.containsKey(market)) markets.get(market).tmcs.add(tmc);				
 			}
 			br.close();
 			if(fw!=null) fw.close();

@@ -11,5 +11,5 @@ public class EpochTMC {
 	
 	public double error;//diff between the GT and the predicated speed
 	
-	
 }
+

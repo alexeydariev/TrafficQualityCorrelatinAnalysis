@@ -47,7 +47,7 @@ class Conditon{
 }
 
 
-public class Market {
+public class MarketV2 {
 	public String name;
 	public HashSet<String> tmcs;
 	
@@ -55,7 +55,7 @@ public class Market {
 	public XAXisMetric densityMetrics;
 	public HashMap<Conditon, YAxisMetric> qualityMetrics;
 	
-	public Market(String market){
+	public MarketV2(String market){
 		name=market;
 		tmcs=new HashSet<String>();
 		qualityMetrics=new HashMap<Conditon, YAxisMetric>();
