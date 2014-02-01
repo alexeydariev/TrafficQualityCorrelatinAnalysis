@@ -46,7 +46,7 @@ public class CorrelationAnalysis {
 				//get the epochIdx
 				int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
 				boolean covered; 
-				if(Double.parseDouble(fields[25])>.75) covered=true;
+				if(Double.parseDouble(fields[25])>.85) covered=true;
 				else covered=false;
 				double error=Double.parseDouble(fields[29]);
 				

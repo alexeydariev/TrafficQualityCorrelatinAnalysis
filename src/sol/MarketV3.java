@@ -14,9 +14,9 @@ public class MarketV3 {
 	}
 	
 	public String toString(){
-		String ret=marketName+"\t";
+		String ret=marketName+",";
 		for(String condition: conditionResults.keySet()){
-			ret+=condition+":"+conditionResults.get(condition)+"\t";
+			ret+=condition+","+conditionResults.get(condition)+",";
 		}
 		return ret;
 	}
