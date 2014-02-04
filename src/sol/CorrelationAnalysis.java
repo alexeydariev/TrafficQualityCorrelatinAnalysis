@@ -28,8 +28,9 @@ public class CorrelationAnalysis {
 	}
 	
 	public void main(){
-		//secondAttempt();
-		thirdAttempt();
+		
+		secondAttempt();
+		//thirdAttempt();
 	}
 	
 	public void thirdAttempt(){
@@ -147,8 +148,10 @@ public class CorrelationAnalysis {
 	public void secondAttempt(){
 		String date="20131213";
 		HashMap<String, MarketV2> markets=readGroundTruth(date);
+		
 		//for(Market market: markets.values()) System.out.println(market);		
 		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", markets); 
+		HashMap<String, TMC> tmcs=loadTMC("A0");
 		
 		File baseFolder=new File(Constants.PROBE_STAT_DATA+date+"/");
 		File[] files=baseFolder.listFiles(new FilenameFilter() {
@@ -164,7 +167,7 @@ public class CorrelationAnalysis {
 
 		for(File statFile: files){
 			//String filepath=Constants.DATA_BASE_FOLDER+"STAT_20131212_6,7,8_probe.csv";
-			readStatProbeFile(markets, tmcToMarket, statFile.getAbsolutePath());
+			readStatProbeFile(tmcs,markets, tmcToMarket, statFile.getAbsolutePath());
 		}
 		try{
 			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+"bin/"+date+".csv");
@@ -230,7 +233,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public void readStatProbeFile(HashMap<String, MarketV2> markets,HashMap<String,String> tmcToMarket,String filepath){
+	public void readStatProbeFile(HashMap<String,TMC> tmcs, HashMap<String, MarketV2> markets,HashMap<String,String> tmcToMarket,String filepath){
 		String tmc=null;
 		try{
 			Scanner sc=new Scanner(new File(filepath));
@@ -240,8 +243,10 @@ public class CorrelationAnalysis {
 				//System.out.println(Arrays.toString(fields));
 				tmc=fields[0].trim();
 				
-				if(tmcToMarket.containsKey(tmc)){
-					//TODO, tmc needs to be a highway tmc as well
+				if(tmcToMarket.containsKey(tmc)
+						&&tmcs.containsKey(tmc)
+						&&(tmcs.get(tmc).minAccessControl||tmcs.get(tmc).maxAccessControl)){
+					
 					if(markets.containsKey(tmcToMarket.get(tmc))){
 						MarketV2 market=markets.get(tmcToMarket.get(tmc));
 						XAXisMetric metric=market.densityMetrics;
@@ -335,6 +340,41 @@ public class CorrelationAnalysis {
 			ex.printStackTrace();
 		}
 		return tmcToMarket;
+	}
+	
+	public HashMap<String, TMC> loadTMC(String extendCountryCode){
+		HashMap<String, TMC> tmcs=new HashMap<String, TMC>();
+		try{
+			BufferedReader br;
+			FileWriter fw=null;
+			File areaTMCToMarket=new File(Constants.MAP_DATA+extendCountryCode+"_tmc_attribute.txt");
+			if(areaTMCToMarket.exists()){
+				br = new BufferedReader(new FileReader(areaTMCToMarket));
+			}else{
+				br = new BufferedReader(new FileReader(Constants.MAP_DATA+"tmc_attribute.txt"));
+				fw=new FileWriter(areaTMCToMarket);
+				System.out.println("fw is not null.");
+			}
+			
+			String line;
+			while ((line = br.readLine()) != null) {
+				String[] fields=line.split(",");
+				if(!fields[94].equals(extendCountryCode)) continue;
+				if(fw!=null){
+					fw.write(line+"\n");
+					//System.out.println(line);
+				}
+				String tmc=fields[0];
+				double miles=Double.parseDouble(fields[1]);
+				boolean minAC=Boolean.parseBoolean(fields[42]),maxAC=Boolean.parseBoolean(fields[68]);
+				tmcs.put(tmc, new TMC(tmc, miles, minAC, maxAC, extendCountryCode));
+			}
+			br.close();
+			if(fw!=null) fw.close();
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		return tmcs;
 	}
 	
 	
