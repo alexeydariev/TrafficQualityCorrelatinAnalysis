@@ -366,7 +366,7 @@ public class CorrelationAnalysis {
 				}
 				String tmc=fields[0];
 				double miles=Double.parseDouble(fields[1]);
-				boolean minAC=Boolean.parseBoolean(fields[42]),maxAC=Boolean.parseBoolean(fields[68]);
+				boolean minAC=fields[42].equals("Y")?true:false,maxAC=fields[68].equals("Y")?true:false;
 				tmcs.put(tmc, new TMC(tmc, miles, minAC, maxAC, extendCountryCode));
 			}
 			br.close();
