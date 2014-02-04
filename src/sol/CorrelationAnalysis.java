@@ -34,7 +34,6 @@ public class CorrelationAnalysis {
 	
 	public void thirdAttempt(){
 		try{
-			
 			HashMap<Integer, ArrayList<EpochTMC>> epochTMCPairsIndexedByEpoch=new HashMap<Integer, ArrayList<EpochTMC>>();
 			//build up epochs
 			String day="20131212";
@@ -49,6 +48,9 @@ public class CorrelationAnalysis {
 				if(Double.parseDouble(fields[25])>.85) covered=true;
 				else covered=false;
 				double error=Double.parseDouble(fields[29]);
+				
+				//TODO the source data seems suspicious
+				if(error>400) System.out.println(line);
 				
 				String engine=fields[11];
 				String isHyw=fields[12];
@@ -67,14 +69,14 @@ public class CorrelationAnalysis {
 			 */
 			HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", null); 
 			HashMap<String, MarketV3> markets=new HashMap<String, MarketV3>();
-			for(int epochIdx=0;epochIdx<24*60/EpochTMC.EPOCH_DURATION;epochIdx++){
+			for(int epochIdx=0;epochIdx<24*60/EpochTMC.ATOMIC_EPOCH_DURATION;epochIdx++){
 				if (epochTMCPairsIndexedByEpoch.containsKey(epochIdx)) {
 					//for each epoch
 					for(MarketV3 market: markets.values()){
 						for(XYMetrics xyMetrics: market.conditionResults.values()){
 							xyMetrics.noOfCoveredTMCsInOneEpoch=0;
 							xyMetrics.noOfTMCsInOneEpoch=0;
-							xyMetrics.errorInOneEpoch=0;
+							xyMetrics.squareErrorInOneEpoch=0;
 						}
 					}					
 					for(EpochTMC pair: epochTMCPairsIndexedByEpoch.get(epochIdx)){
@@ -89,28 +91,54 @@ public class CorrelationAnalysis {
 						XYMetrics xyMetrics=market.conditionResults.get(pair.condition);
 						xyMetrics.noOfTMCsInOneEpoch+=1;
 						if(pair.covered) xyMetrics.noOfCoveredTMCsInOneEpoch+=1;
-						xyMetrics.errorInOneEpoch+=Math.abs(pair.error);
+						xyMetrics.squareErrorInOneEpoch+=Math.pow(pair.error,2);
+						
 					}
 					for(MarketV3 market: markets.values()){
 						//System.out.println("# of conditions :"+market.conditionResults.size());
 						for(XYMetrics xyMetrics: market.conditionResults.values()){
 							if(xyMetrics.noOfTMCsInOneEpoch>0){
 								xyMetrics.coverages.add((xyMetrics.noOfCoveredTMCsInOneEpoch+0.0)/xyMetrics.noOfTMCsInOneEpoch);
-								xyMetrics.errors.add(xyMetrics.errorInOneEpoch/xyMetrics.noOfTMCsInOneEpoch);
+								double rmse=Math.sqrt(xyMetrics.squareErrorInOneEpoch/xyMetrics.noOfTMCsInOneEpoch);
+								xyMetrics.rootMeanSquareErrors.add(rmse);
+								xyMetrics.tmcCnts.add(xyMetrics.noOfTMCsInOneEpoch+0.0);
 							}
 						}
 						//System.out.println(market);
 					}
 				}				
 			}			
+			
+			//calculate the average of the epochs
 			Mean mean=new Mean();
 			for(MarketV3 market: markets.values()){
 				for(XYMetrics xyMetrics: market.conditionResults.values()){
 					xyMetrics.avgCoverage=mean.evaluate(CommonUtils.doubleListToDoubleArray(xyMetrics.coverages));
-					xyMetrics.avgError=mean.evaluate(CommonUtils.doubleListToDoubleArray(xyMetrics.errors));
+					xyMetrics.avgRMSE=mean.evaluate(CommonUtils.doubleListToDoubleArray(xyMetrics.rootMeanSquareErrors));
+					xyMetrics.avgTmcCnt=mean.evaluate(CommonUtils.doubleListToDoubleArray(xyMetrics.tmcCnts));
 				}
-				System.out.println(market);
 			}
+			
+			//metropolitans
+			int cnt=0;
+			for(MarketV3 market: markets.values()){
+				if(market.marketName.contains("-")){
+					cnt++;
+					System.out.println(market);
+				}
+			}
+			System.out.println("*********** "+cnt+" Metros ****************");
+			
+			// cities
+			cnt=0;
+			for(MarketV3 market: markets.values()){
+				if(!market.marketName.contains("-")){
+					cnt++;
+					System.out.println(market);
+				}
+			}
+			System.out.println("*********** "+cnt+" Cities ****************");
+			
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
