@@ -31,10 +31,10 @@ public class CorrelationAnalysis {
 	public static String analysisVersion;
 	
 	public void main(){
-		
+//TODO main
 		secondAttempt();
 		//thirdAttempt();
-		//mergeResultFiles("v3");
+	
 	}
 	
 	public void thirdAttempt(){
@@ -57,10 +57,8 @@ public class CorrelationAnalysis {
 					boolean covered; 
 					if(Double.parseDouble(fields[25])>.85) covered=true;
 					else covered=false;
-					double error=Double.parseDouble(fields[29]);
+					double error=Double.parseDouble(fields[30]);//capped difference
 					
-					//TODO the source data seems suspicious
-					//if(error>400) System.out.println(line);
 					
 					String engine=fields[11];
 					String isHyw=fields[12];
@@ -77,7 +75,7 @@ public class CorrelationAnalysis {
 				/**
 				 * Calculate the stats
 				 */
-				HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", null); 
+				HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", null, null); 
 				HashMap<String, MarketV3> markets=new HashMap<String, MarketV3>();
 				for(int epochIdx=0;epochIdx<24*60/EpochTMC.ATOMIC_EPOCH_DURATION;epochIdx++){
 					if (epochTMCPairsIndexedByEpoch.containsKey(epochIdx)) {
@@ -146,6 +144,7 @@ public class CorrelationAnalysis {
 				System.out.println("*********** "+cnt+" Cities ****************");
 			}
 			
+			mergeResultFiles("v3");
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
@@ -161,7 +160,7 @@ public class CorrelationAnalysis {
 		for(String date:dates){
 			HashMap<String, MarketV2> markets=readGroundTruth(date);
 			//for(Market market: markets.values()) System.out.println(market);		
-			HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", markets); 
+			HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", markets, tmcs); 
 
 			
 			File baseFolder=new File(Constants.PROBE_STAT_DATA+date+"/");
@@ -316,7 +315,7 @@ public class CorrelationAnalysis {
 		return markets;
 	}
 	
-	public HashMap<String, String> loadTMCToMarket(String extendCountryCode, HashMap<String, MarketV2> markets){
+	public HashMap<String, String> loadTMCToMarket(String extendCountryCode, HashMap<String, MarketV2> markets, HashMap<String, TMC> tmcs){
 		HashMap<String, String> tmcToMarket=new HashMap<String, String>();
 		try{
 			BufferedReader br;
@@ -349,7 +348,15 @@ public class CorrelationAnalysis {
 				}
 				String tmc=fields[0],  market=fields[marketNameIdx].replace("\\", "");
 				tmcToMarket.put(tmc, market);
-				if(markets!=null&&markets.containsKey(market)) markets.get(market).tmcs.add(tmc);				
+				
+				//update market info.
+				if(markets!=null&&markets.containsKey(market)){
+					MarketV2 marketV2=markets.get(market);
+					marketV2.tmcs.add(tmc);				
+					if(tmcs!=null&&tmcs.containsKey(tmc)){
+						marketV2.miles+=tmcs.get(tmc).miles;
+					}
+				}
 			}
 			br.close();
 			if(fw!=null) fw.close();

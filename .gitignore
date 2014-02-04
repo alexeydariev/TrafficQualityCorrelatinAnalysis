@@ -1,6 +1,7 @@
 # ignore all bin directories
 # matches "bin" in any subfolder
 bin/
+bin/sol/
 
 # ignore all libraries
 #lib/

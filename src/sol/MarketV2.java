@@ -54,7 +54,7 @@ public class MarketV2 {
 	
 	public String date;
 	public HashSet<String> tmcs;
-	
+	public double miles;
 	
 	
 	//public Conditon conditon;
@@ -75,7 +75,7 @@ public class MarketV2 {
 		for(String cond: ConditonV2.allConditonV2s){
 			header+=",Condition,qualityScore";
 		}
-		header+=",noOfTMCs,totalCntOfProbes,totalCntOfVehicles";
+		header+=",noOfTMCs,totalCntOfProbes,totalCntOfVehicles,totalMiles";
 		return header;
 	}
 	
@@ -93,7 +93,9 @@ public class MarketV2 {
 			else marketString+=",-1";
 		}
 		marketString+=","+tmcs.size();		
-		marketString+=","+densityMetrics.sumOfProbes+","+densityMetrics.sumOfVehicles;
+		marketString+=","+densityMetrics.sumOfProbes
+					+","+densityMetrics.sumOfVehicles
+					+","+String.format("%.2f", miles);
 		
 		return marketString;
 	}
