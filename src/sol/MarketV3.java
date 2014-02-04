@@ -2,21 +2,36 @@ package sol;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class MarketV3 {
 	public String marketName;
+	public String date;
 	
 	public HashMap<String, XYMetrics> conditionResults;
+	public static HashSet<String> allConditions=new HashSet<String>();
 	
-	public MarketV3(String marketName){
+	
+	public MarketV3(String marketName, String date){
 		this.marketName=marketName;
+		this.date=date;
 		conditionResults=new HashMap<String, XYMetrics>();
 	}
 	
+	public static String getHeader(){
+		String header="market,date";
+		for(String cond: allConditions){
+			header+=","+cond+","+XYMetrics.getHeader();
+		}
+		return header;
+	}
+	
+	
 	public String toString(){
-		String ret=marketName+",";
-		for(String condition: conditionResults.keySet()){
-			ret+=condition+","+conditionResults.get(condition)+",";
+		String ret=marketName+","+date;
+		for(String condition: allConditions){
+			if(conditionResults.containsKey(condition)) ret+=","+condition+","+conditionResults.get(condition);
+			else ret+=","+condition+","+"-1,-1,-1,-1";
 		}
 		return ret;
 	}
@@ -40,6 +55,10 @@ class XYMetrics{
 		coverages=new ArrayList<Double>();
 		rootMeanSquareErrors=new ArrayList<Double>();
 		tmcCnts=new ArrayList<Double>();
+	}
+		
+	public static String getHeader(){
+		return "avgCoverage,avgRMSE,avgTmcCnt,noOfEpoches";
 	}
 		
 	public String toString(){

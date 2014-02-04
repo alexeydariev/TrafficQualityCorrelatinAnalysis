@@ -30,10 +30,12 @@ class YAxisMetric{
 }
 
 class ConditonV2{
+	
 	public String timePeriod;
 	public String engine;
 	public String roadCondition;
 	
+	public static HashSet<String> allConditonV2s=new HashSet<String>();
 	
 	public ConditonV2(String engine, String timePeriod, String roadCondition){
 		this.engine=engine;
@@ -41,35 +43,54 @@ class ConditonV2{
 		this.roadCondition=roadCondition;
 	}
 	public String toString(){
-		return engine+" "+timePeriod+" "+roadCondition;
+		return engine+"-"+timePeriod+"-"+roadCondition;
 	}
-	
+
 }
 
 
 public class MarketV2 {
 	public String name;
+	
+	public String date;
 	public HashSet<String> tmcs;
+	
+	
 	
 	//public Conditon conditon;
 	public XAXisMetric densityMetrics;
-	public HashMap<ConditonV2, YAxisMetric> qualityMetrics;
+	public HashMap<String, YAxisMetric> qualityMetrics;
 	
-	public MarketV2(String market){
+	public MarketV2(String market, String date){
 		name=market;
+		this.date=date;
 		tmcs=new HashSet<String>();
-		qualityMetrics=new HashMap<ConditonV2, YAxisMetric>();
+		qualityMetrics=new HashMap<String, YAxisMetric>();
 		densityMetrics=new XAXisMetric();
 	}
 	
+	public static String getHeader(){
+		String header="market,date,avgProbeCntPerTMC,avgVehicleCntPerTMC" 
+				+",noOfTMCsWithProbeCntOverThrshold,noOfTMCsWithVehicleCntOverThreshold";
+		for(String cond: ConditonV2.allConditonV2s){
+			header+=",Condition,qualityScore";
+		}
+		header+=",noOfTMCs,totalCntOfProbes,totalCntOfVehicles";
+		return header;
+	}
+	
 	public String toString(){
-		String marketString=name;
-		marketString+=","+String.format("%.3f", densityMetrics.avgProbeCntPerTMC)+","+String.format("%.3f", densityMetrics.avgVehicleCntPerTMC)
-				+","+densityMetrics.noOfTMCsWithProbeCntOverThreshold+","+densityMetrics.noOfTMCsWithVehicleCntOverThreshold;
+		String marketString=name+","+date;
+		marketString+=","+String.format("%.3f", densityMetrics.avgProbeCntPerTMC)
+				+","+String.format("%.3f", densityMetrics.avgVehicleCntPerTMC)
+				+","+densityMetrics.noOfTMCsWithProbeCntOverThreshold
+				+","+densityMetrics.noOfTMCsWithVehicleCntOverThreshold;
 		
-		for(ConditonV2 condition:qualityMetrics.keySet()){
-			YAxisMetric yMetric=qualityMetrics.get(condition);
-			marketString+=","+String.format("%.3f", yMetric.qualityScore);
+		for(String cond:ConditonV2.allConditonV2s){
+			YAxisMetric yMetric=qualityMetrics.get(cond);
+			marketString+=","+cond;
+			if(yMetric!=null) marketString+=","+String.format("%.3f", yMetric.qualityScore);
+			else marketString+=",-1";
 		}
 		marketString+=","+tmcs.size();		
 		marketString+=","+densityMetrics.sumOfProbes+","+densityMetrics.sumOfVehicles;
