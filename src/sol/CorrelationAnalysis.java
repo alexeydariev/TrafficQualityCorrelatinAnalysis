@@ -167,7 +167,6 @@ public class CorrelationAnalysis {
 			readStatProbeFile(markets, tmcToMarket, statFile.getAbsolutePath());
 		}
 		try{
-
 			FileWriter fw=new FileWriter(Constants.PROJECT_FOLDER+"bin/"+date+".csv");
 			for(String name: markets.keySet()){
 				MarketV2 market=markets.get(name);
@@ -242,6 +241,7 @@ public class CorrelationAnalysis {
 				tmc=fields[0].trim();
 				
 				if(tmcToMarket.containsKey(tmc)){
+					//TODO, tmc needs to be a highway tmc as well
 					if(markets.containsKey(tmcToMarket.get(tmc))){
 						MarketV2 market=markets.get(tmcToMarket.get(tmc));
 						XAXisMetric metric=market.densityMetrics;
