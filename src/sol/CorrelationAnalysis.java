@@ -32,9 +32,27 @@ public class CorrelationAnalysis {
 	
 	public void main(){
 //TODO main
-		secondAttempt();
+		//secondAttempt();
 		//thirdAttempt();
+		
+		addProbeCntToMarketv3();
+	}
 	
+	
+	public void addProbeCntToMarketv3(){
+		HashMap<String, MarketV2> marketV2s=loadMarketV2s();
+		for(MarketV3 market: loadMarketV3s().values()){
+			System.out.print(market.toString()+",");
+			if(marketV2s.containsKey(market.marketName)){
+				MarketV2 m2=marketV2s.get(market.marketName);
+				System.out.println(
+						String.format("%.2f", m2.densityMetrics.sumOfProbes/m2.miles)
+						+","+String.format("%.2f", m2.densityMetrics.sumOfVehicles/m2.miles)
+				);
+			}else{
+				System.out.println("-1,-1");
+			}
+		}
 	}
 	
 	public void thirdAttempt(){
@@ -364,6 +382,39 @@ public class CorrelationAnalysis {
 			ex.printStackTrace();
 		}
 		return tmcToMarket;
+	}
+	
+	public HashMap<String, MarketV2> loadMarketV2s(){
+		HashMap<String, MarketV2> marketV2s=new  HashMap<String, MarketV2>();
+		try{
+			Scanner sc=new Scanner(new File( Constants.BIN_FOLDER+"v2.csv"));
+			sc.nextLine(); //read off the header
+			while(sc.hasNextLine()){
+				String[] fields=sc.nextLine().split(",");
+				marketV2s.put(fields[0], new MarketV2(fields));
+			}
+			sc.close();
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		return marketV2s;
+	}
+	
+	public HashMap<String, MarketV3> loadMarketV3s(){
+		HashMap<String, MarketV3> marketV3s=new  HashMap<String, MarketV3>();
+		try{
+			Scanner sc=new Scanner(new File( Constants.BIN_FOLDER+"v3.csv"));
+			sc.nextLine(); //read off the header
+			while(sc.hasNextLine()){
+				String[] fields=sc.nextLine().split(",");
+				marketV3s.put(fields[0], new MarketV3(fields));
+			}
+			sc.close();
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		System.out.println(marketV3s.size()+" markets retrieved");
+		return marketV3s;
 	}
 	
 	public HashMap<String, TMC> loadTMC(String extendCountryCode){

@@ -69,6 +69,28 @@ public class MarketV2 {
 		densityMetrics=new XAXisMetric();
 	}
 	
+	public MarketV2(String[] fields){
+		name=fields[0];
+		date=fields[1];
+		densityMetrics=new XAXisMetric();
+			densityMetrics.avgProbeCntPerTMC=Double.parseDouble(fields[2]);
+			densityMetrics.avgVehicleCntPerTMC=Double.parseDouble(fields[3]);
+			densityMetrics.noOfTMCsWithProbeCntOverThreshold=Double.parseDouble(fields[4]);
+			densityMetrics.noOfTMCsWithVehicleCntOverThreshold=Double.parseDouble(fields[5]);
+		qualityMetrics=new HashMap<String, YAxisMetric>();
+		int idx=6;
+		while(idx<fields.length-4){
+			qualityMetrics.put(fields[idx], new YAxisMetric(Double.parseDouble(fields[idx+1])));
+			ConditonV2.allConditonV2s.add(fields[idx]);
+			
+			idx+=2;
+		}
+		tmcs=new HashSet<String>();
+			densityMetrics.sumOfProbes=Double.parseDouble(fields[idx+1]);
+			densityMetrics.sumOfVehicles=Double.parseDouble(fields[idx+2]);
+		miles=Double.parseDouble(fields[idx+3]);		
+	}
+	
 	public static String getHeader(){
 		String header="market,date,avgProbeCntPerTMC,avgVehicleCntPerTMC" 
 				+",noOfTMCsWithProbeCntOverThrshold,noOfTMCsWithVehicleCntOverThreshold";
