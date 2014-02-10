@@ -89,23 +89,40 @@ class XYMetrics{
 
 class EpochTMC {
 	public static int ATOMIC_EPOCH_DURATION=3; //in minutes
-		
+	
 	public int epochIdx; //index of epoch of a day, e.g. 1 means the 1st epoch of the day
 	public String tmc; //tmc code
+	public String date;
+	
 	
 	public boolean covered; //true if have real-time data
+	
 	public int noOfProbes;
+	public HashSet<String> vehicleSet;
+	public HashSet<String> providerSet;
 	
-	public double error;//diff between the GT and the predicated speed
-	
+	public double error;//diff between the GT and the predicated speed	
 	public String condition;
 	
-	public EpochTMC(String tmc, int epochIdx, boolean covered, double error, String condition){
+	public EpochTMC(String date, String tmc, int epochIdx){
+		this.date=date;
 		this.tmc=tmc;
 		this.epochIdx=epochIdx;
+	}
+	
+	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition){
+		this(date, tmc, epochIdx);
 		this.covered=covered;
 		this.error=error;
 		this.condition=condition;
+	}
+	
+	public String getID(){
+		return date+"-"+epochIdx+"-"+tmc;
+	}
+	
+	public String toString(){
+		return date+","+epochIdx+","+tmc+","+condition+","+noOfProbes+","+vehicleSet.size()+","+providerSet.size()+","+error;
 	}
 }
 
