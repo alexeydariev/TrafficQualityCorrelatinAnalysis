@@ -99,7 +99,9 @@ class EpochTMC {
 	
 	public int noOfProbes;
 	public HashSet<String> vehicleSet;
+	public int noOfVehicles;
 	public HashSet<String> providerSet;
+	public int noOfProviders;
 	
 	public double error;//diff between the GT and the predicated speed	
 	public String condition;
@@ -119,13 +121,18 @@ class EpochTMC {
 		this.condition=condition;
 	}
 	
+	
+	
 	public String getID(){
 		return date+"-"+epochIdx+"-"+tmc;
 	}
 	
+	//serialize
 	public String toString(){
 		return date+","+epochIdx+","+tmc+","+condition+","+noOfProbes+","+vehicleSet.size()+","+providerSet.size()+","+error;
 	}
+	
+	
 }
 
 

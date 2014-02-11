@@ -15,12 +15,17 @@ import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
 
+import javax.swing.text.AbstractDocument.LeafElement;
+
+import org.apache.commons.math3.analysis.function.Exp;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 
 
@@ -37,7 +42,9 @@ public class CorrelationAnalysis {
 		//thirdAttempt();
 		
 		//addProbeCntToMarketv3();
+		
 		forthAttempt();
+		
 	}
 	
 	
@@ -58,14 +65,16 @@ public class CorrelationAnalysis {
 	}
 	
 	
-	public void forthAttempt(){
-		//TODO
+	public void v4OutputStatResults(){
+		analysisVersion="v4_";	
 		String[] dates={"20131212"};
 		HashMap<String, EpochTMC> epochTMCPairs;
 		ArrayList<EpochTMC> epochTMCPairsWithGroundTruh=new ArrayList<EpochTMC>();
 		
 		FileWriter fw;
+		
 		try{
+			//produce stat files
 			for(String date: dates){
 				for(int batch=0;batch<10;batch++){
 					String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
@@ -103,16 +112,85 @@ public class CorrelationAnalysis {
 				}
 				
 				//output the stats to a file
-				fw=new FileWriter(Constants.PROBE_RAW_DATA+date+"_stat.csv");
+				fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+".csv");
 				for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
 					fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
 				}
 				fw.close();
-			}
+			}	
+			
+			
 			
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
+	}
+	
+	public ArrayList<EpochTMC> v4ReadStatResult(String date, String engine, boolean congestion){
+		ArrayList<EpochTMC> epochTMCs=new ArrayList<EpochTMC>();
+		//read stat file and analyze
+		try{
+			Scanner sc=new Scanner(new File(Constants.BIN_FOLDER+"v4_"+date+".csv"));
+			while(sc.hasNextLine()){
+				String line=sc.nextLine();
+				String[] fields=line.split(",");
+				EpochTMC epochTMC=new EpochTMC(fields[0], fields[2], Integer.parseInt(fields[1]));
+				epochTMC.condition=fields[3];
+				if(!epochTMC.condition.startsWith(engine)||
+				!(epochTMC.condition.contains("Free")^congestion) ) continue;
+				epochTMC.noOfProbes=Integer.parseInt(fields[4]);
+				epochTMC.error=Double.parseDouble(fields[fields.length-1]);
+				epochTMCs.add(epochTMC);
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		return epochTMCs;
+	}
+	
+	public void forthAttempt(){
+		//v4OutputStatResults();
+		
+		String engine="HTTM";
+		boolean[] isCongestions={false, true};
+		for(boolean isCongestion: isCongestions){
+			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult("20131212",engine, isCongestion);
+			
+			double[] binsOfDensity=new double[10];//of probes;
+			for(int i=1;i<binsOfDensity.length;i++) binsOfDensity[i]=binsOfDensity[i-1]+30;
+			//System.out.println(Arrays.toString(binsOfDensity));
+			
+			double[] avgErrors=new double[binsOfDensity.length];
+			double[] avgDensity=new double[binsOfDensity.length];
+			int[] cntOfDensity=new int[binsOfDensity.length];
+			for(EpochTMC epochTMC: epochTMCs){
+				int densityIdx=0;
+				while(densityIdx<binsOfDensity.length&&epochTMC.noOfProbes>=binsOfDensity[densityIdx]) densityIdx++;
+				cntOfDensity[densityIdx-1]+=1;
+				avgErrors[densityIdx-1]+=epochTMC.error;
+				avgDensity[densityIdx-1]+=epochTMC.noOfProbes;
+			}
+			for(int i=0;i<avgErrors.length;i++){
+				avgErrors[i]/=cntOfDensity[i];
+				avgDensity[i]/=cntOfDensity[i];
+			}
+			
+			//print out stats
+			if(isCongestion) System.out.println("\tHTTM-Congestion");
+			else System.out.println("\tHTTM-Free Flow");
+			
+			System.out.println("densityRange,#ofPairs,avgDensity,avgError");
+			for(int i=0;i<binsOfDensity.length;i++){
+				System.out.print("["+binsOfDensity[i]+"~");
+				if(i<binsOfDensity.length-1) System.out.print(binsOfDensity[i+1]+"],");
+				else System.out.print("Inf],");
+				System.out.print(cntOfDensity[i]+",");
+				System.out.println(String.format("%.2f", avgDensity[i])+","+String.format("%.2f", avgErrors[i]));
+			}
+			PearsonsCorrelation pc=new PearsonsCorrelation();
+			System.out.println("correlation is "+String.format("%.2f", pc.correlation(avgDensity, avgErrors))+"\n");
+		}
+		
 	}
 	
 	public void thirdAttempt(){
@@ -253,7 +331,7 @@ public class CorrelationAnalysis {
 
 			for(File statFile: files){
 				//String filepath=Constants.DATA_BASE_FOLDER+"STAT_20131212_6,7,8_probe.csv";
-				readStatProbeFile(tmcs,markets, tmcToMarket, statFile.getAbsolutePath());
+				v2ReadStatResults(tmcs,markets, tmcToMarket, statFile.getAbsolutePath());
 			}
 			try{
 				FileWriter fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+".csv");
@@ -322,7 +400,7 @@ public class CorrelationAnalysis {
 		return epochTMCPairs;
 	}
 	
-	public void readStatProbeFile(HashMap<String,TMC> tmcs, HashMap<String, MarketV2> markets,HashMap<String,String> tmcToMarket,String filepath){
+	public void v2ReadStatResults(HashMap<String,TMC> tmcs, HashMap<String, MarketV2> markets,HashMap<String,String> tmcToMarket,String filepath){
 		String tmc=null;
 		try{
 			Scanner sc=new Scanner(new File(filepath));
