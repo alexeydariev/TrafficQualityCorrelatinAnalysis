@@ -43,7 +43,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		forthAttempt();
+		v4OutputStatResults();
+		//forthAttempt();
 		
 	}
 	
@@ -67,7 +68,7 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		analysisVersion="v4_";	
-		String[] dates={"20131212"};
+		String[] dates={"20131213"};
 		HashMap<String, EpochTMC> epochTMCPairs;
 		ArrayList<EpochTMC> epochTMCPairsWithGroundTruh=new ArrayList<EpochTMC>();
 		
@@ -149,8 +150,9 @@ public class CorrelationAnalysis {
 	}
 	
 	public void forthAttempt(){
-		//v4OutputStatResults();
 		
+		//v4OutputStatResults();
+			
 		String engine="HTTM";
 		boolean[] isCongestions={false, true};
 		for(boolean isCongestion: isCongestions){
