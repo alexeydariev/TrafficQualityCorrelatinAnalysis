@@ -132,7 +132,7 @@ final public class App implements AutoCloseable {
         m_NonTmcOnly = "0";
 
         int noOfBatches=10, noOfTablePerBatch=3;
-        for(int i=0;i<5;i++){
+        for(int i=0;i<noOfBatches;i++){
         	m_Table="";
         	for(int j=1;j<=noOfTablePerBatch;j++){
         		if(j>1) m_Table+=",";
@@ -166,7 +166,7 @@ final public class App implements AutoCloseable {
             
             
             //if (file.isFile()){ file.delete(); }
-            file.deleteOnExit();
+            //file.deleteOnExit();
 
 //            sql.addExtractQuery(prbwp, file, "SELECT TO_CHAR(SAMPLE_DATE,'YYYY-MM-DD HH24:MI:SS') || ',' || PROBE_DATA_PROVIDER_DESC || ',' || PROBE_ID || ',' || " + 
 //                "EBU_COUNTRY_CODE || LPAD(TO_CHAR(LOCATION_TABLE_NR),2,'0') || ',' || DECODE(TMC_PATH_DIRECTION,'+','P','-','N',TMC_PATH_DIRECTION) || ',' || POINT_LOCATION_CODE || ',' || " + 

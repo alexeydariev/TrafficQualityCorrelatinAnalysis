@@ -36,7 +36,8 @@ public class CorrelationAnalysis {
 		//secondAttempt();
 		//thirdAttempt();
 		
-		addProbeCntToMarketv3();
+		//addProbeCntToMarketv3();
+		forthAttempt();
 	}
 	
 	
@@ -61,41 +62,54 @@ public class CorrelationAnalysis {
 		//TODO
 		String[] dates={"20131212"};
 		HashMap<String, EpochTMC> epochTMCPairs;
+		ArrayList<EpochTMC> epochTMCPairsWithGroundTruh=new ArrayList<EpochTMC>();
 		
 		FileWriter fw;
 		try{
 			for(String date: dates){
-				epochTMCPairs=readRawProbeFileOutputDensityByTMC(date+"_1,2,3_probe.csv",date , 180);
-				
-				//update the error of epochTMC pairs
-				BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+"ground_truth_"+date+".txt"));
-				String line;
-				while((line=br.readLine())!=null){
-					String[] fields=line.split(",");
-					String tmc=fields[10];
-					//get the epochIdx
-					int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
-					double error=Double.parseDouble(fields[30]);//capped difference
-					String engine=fields[11];
-					String isHyw=fields[12];
-					String flowType=fields[36];
+				for(int batch=0;batch<10;batch++){
+					String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
+					epochTMCPairs=readRawProbeFileOutputDensityByTMC(date+"_"+batchString+"_probe.csv",date , 180);
 					
-					String id=date+"-"+epochIdx+"-"+tmc;
-					if(epochTMCPairs.containsKey(id)){
-						EpochTMC epochTMC=epochTMCPairs.get(id);
-						epochTMC.error=error;
-						epochTMC.condition=engine+"-"+flowType+"-"+isHyw;
+					//update the error of epochTMC pairs
+					BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+"ground_truth_"+date+".txt"));
+					String line;
+					while((line=br.readLine())!=null){
+						String[] fields=line.split(",");
+						String tmc=fields[10];
+						//get the epochIdx
+						int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
+						double error=Double.parseDouble(fields[30]);//capped difference
+						String engine=fields[11];
+						String isHyw=fields[12];
+						String flowType=fields[36];
+						
+						String id=date+"-"+epochIdx+"-"+tmc;
+						if(epochTMCPairs.containsKey(id)){
+							EpochTMC epochTMC=epochTMCPairs.get(id);
+							epochTMC.error=error;
+							epochTMC.condition=engine+"-"+flowType+"-"+isHyw;
+						}
 					}
+					br.close();
+					
+					//remove all pairs without ground truth
+					for(EpochTMC epochTMC: epochTMCPairs.values()){
+						if(epochTMC.error>0){//only keep epoch-tmc pairs with ground truth 
+							epochTMCPairsWithGroundTruh.add(epochTMC);
+						}
+					}					
+					
 				}
-				br.close();
 				
 				//output the stats to a file
 				fw=new FileWriter(Constants.PROBE_RAW_DATA+date+"_stat.csv");
-				for(EpochTMC epochTMC: epochTMCPairs.values()){
-					fw.write(epochTMC+"\n");
+				for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
+					fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
 				}
 				fw.close();
 			}
+			
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
@@ -300,8 +314,7 @@ public class CorrelationAnalysis {
 			}
 			br.close();
 			
-			
-			System.out.println(cnt);
+			System.out.println("line cnt of the raw probe data file "+fileName+ " = "+cnt);
 		}catch(Exception ex){
 			System.out.println("line ="+line);
 			ex.printStackTrace();

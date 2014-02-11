@@ -108,6 +108,8 @@ class EpochTMC {
 		this.date=date;
 		this.tmc=tmc;
 		this.epochIdx=epochIdx;
+		vehicleSet=new HashSet<String>();
+		providerSet=new HashSet<String>();		
 	}
 	
 	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition){

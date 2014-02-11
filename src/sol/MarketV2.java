@@ -82,7 +82,6 @@ public class MarketV2 {
 		while(idx<fields.length-4){
 			qualityMetrics.put(fields[idx], new YAxisMetric(Double.parseDouble(fields[idx+1])));
 			ConditonV2.allConditonV2s.add(fields[idx]);
-			
 			idx+=2;
 		}
 		tmcs=new HashSet<String>();
