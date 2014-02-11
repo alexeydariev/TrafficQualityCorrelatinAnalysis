@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,6 +29,8 @@ import javax.swing.text.AbstractDocument.LeafElement;
 import org.apache.commons.math3.analysis.function.Exp;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
+
+import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 
 
 public class CorrelationAnalysis {
@@ -43,8 +47,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		v4OutputStatResults();
-		//forthAttempt();
+		//v4OutputStatResults();
+		v4Attempt();
 		
 	}
 	
@@ -149,53 +153,101 @@ public class CorrelationAnalysis {
 		return epochTMCs;
 	}
 	
-	public void forthAttempt(){
-		
+	public void v4Attempt(){
 		//v4OutputStatResults();
-			
 		String engine="HTTM";
 		boolean[] isCongestions={false, true};
+		String date="20131212";
+		
 		for(boolean isCongestion: isCongestions){
-			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult("20131212",engine, isCongestion);
+			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult(date,engine, isCongestion);
+			//sort epochTMC based on # of probes
+			Collections.sort(epochTMCs, new Comparator() 
+			{
+			    public int compare(Object o1, Object o2) 
+			    {
+			       if(o1 instanceof EpochTMC && o2 instanceof EpochTMC) 
+			       {
+			         return ((EpochTMC)o1).noOfProbes-((EpochTMC)o2).noOfProbes;
+			       } 
+			       return 0;    
+			    }
+			});
+			//TODO parameters		
+			int INI_SIZE=1000;
+			int MIN_NO_SAMPLES_IN_A_BIN=100;
+			double[] binsOfDensity=new double[INI_SIZE];//of probes;
 			
-			double[] binsOfDensity=new double[10];//of probes;
-			for(int i=1;i<binsOfDensity.length;i++) binsOfDensity[i]=binsOfDensity[i-1]+30;
+			int noOfBins=100;int binStep=2;
+			double[] hardCodedBins=new double[noOfBins];
+			for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
+			
 			//System.out.println(Arrays.toString(binsOfDensity));
+						
+		
+			double[] avgDensity=new double[INI_SIZE];
+			double[] avgQualityScore=new double[INI_SIZE];
+			double[] avgErrors=new double[INI_SIZE];
+			int[] cntOfDensity=new int[INI_SIZE];
+			int[] cntOfErrorAboveTreshold=new int[INI_SIZE];
+			int binIdx=1;	
 			
-			double[] avgErrors=new double[binsOfDensity.length];
-			double[] avgDensity=new double[binsOfDensity.length];
-			int[] cntOfDensity=new int[binsOfDensity.length];
+			int nextHardCodedBinIdx=1;
 			for(EpochTMC epochTMC: epochTMCs){
-				int densityIdx=0;
-				while(densityIdx<binsOfDensity.length&&epochTMC.noOfProbes>=binsOfDensity[densityIdx]) densityIdx++;
-				cntOfDensity[densityIdx-1]+=1;
-				avgErrors[densityIdx-1]+=epochTMC.error;
-				avgDensity[densityIdx-1]+=epochTMC.noOfProbes;
-			}
-			for(int i=0;i<avgErrors.length;i++){
+				if(binIdx<binsOfDensity.length&&cntOfDensity[binIdx-1]>MIN_NO_SAMPLES_IN_A_BIN
+		&&nextHardCodedBinIdx<hardCodedBins.length&&epochTMC.noOfProbes>hardCodedBins[nextHardCodedBinIdx]){
+					binsOfDensity[binIdx]=epochTMC.noOfProbes;
+					binIdx++;
+					nextHardCodedBinIdx++;
+				}
+				
+				cntOfDensity[binIdx-1]+=1;
+				avgErrors[binIdx-1]+=epochTMC.error;
+				avgDensity[binIdx-1]+=epochTMC.noOfProbes;
+				if(epochTMC.error>10) cntOfErrorAboveTreshold[binIdx-1]++;
+			}			
+			//System.out.println("densityIdx="+binIdx);
+			for(int i=0;i<binIdx;i++){
 				avgErrors[i]/=cntOfDensity[i];
 				avgDensity[i]/=cntOfDensity[i];
+				avgQualityScore[i]=((int)((1-(cntOfErrorAboveTreshold[i]+0.0)/cntOfDensity[i])*10000))/100.0;
 			}
 			
-			//print out stats
-			if(isCongestion) System.out.println("\tHTTM-Congestion");
-			else System.out.println("\tHTTM-Free Flow");
+			//print out Title of the stats
+			String title="\t All Markets: HTTM-";
+			if(isCongestion) title+="Congestion";
+			else title+="Free Flow";
+			title+=" on "+date;
+			System.out.println(title);
 			
-			System.out.println("densityRange,#ofPairs,avgDensity,avgError");
-			for(int i=0;i<binsOfDensity.length;i++){
-				System.out.print("["+binsOfDensity[i]+"~");
-				if(i<binsOfDensity.length-1) System.out.print(binsOfDensity[i+1]+"],");
+			System.out.println("densityRange,#ofEpochTMCPairs,avgDensity,avgError,avgQS");
+			for(int i=0;i<binIdx;i++){
+				if(i>0) System.out.print("["+String.format("%.1f", binsOfDensity[i])+"~");
+				else System.out.print("[1.0~");
+				if(i<binIdx-1) System.out.print(String.format("%.1f",binsOfDensity[i+1])+"],");
 				else System.out.print("Inf],");
 				System.out.print(cntOfDensity[i]+",");
-				System.out.println(String.format("%.2f", avgDensity[i])+","+String.format("%.2f", avgErrors[i]));
+				System.out.println(
+						String.format("%.2f", avgDensity[i])
+						+","+String.format("%.2f", avgErrors[i])
+						+","+avgQualityScore[i]+"%"
+				);
 			}
+			
+			avgDensity=Arrays.copyOf(avgDensity, binIdx);
+			avgErrors=Arrays.copyOf(avgErrors, binIdx);
+			avgQualityScore=Arrays.copyOf(avgQualityScore, binIdx);
 			PearsonsCorrelation pc=new PearsonsCorrelation();
-			System.out.println("correlation is "+String.format("%.2f", pc.correlation(avgDensity, avgErrors))+"\n");
+			System.out.println("correlation between avgDensity and avgError is "+String.format("%.2f", pc.correlation(avgDensity, avgErrors)));
+			System.out.println("correlation between avgDensity and avgQualityScore is "+String.format("%.2f", pc.correlation(avgDensity, avgQualityScore)));
+			System.out.println();
+			
+			
 		}
 		
 	}
 	
-	public void thirdAttempt(){
+	public void v3Attempt(){
 		try{
 			analysisVersion="v3_";			
 			
@@ -306,7 +358,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public void secondAttempt(){
+	public void v2Attempt(){
 		analysisVersion="v2_";
 
 		HashMap<String, TMC> tmcs=loadTMC("A0");

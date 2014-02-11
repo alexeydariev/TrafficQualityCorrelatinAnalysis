@@ -89,7 +89,6 @@ class XYMetrics{
 
 class EpochTMC {
 	public static int ATOMIC_EPOCH_DURATION=3; //in minutes
-	
 	public int epochIdx; //index of epoch of a day, e.g. 1 means the 1st epoch of the day
 	public String tmc; //tmc code
 	public String date;
@@ -120,7 +119,6 @@ class EpochTMC {
 		this.error=error;
 		this.condition=condition;
 	}
-	
 	
 	
 	public String getID(){
