@@ -125,19 +125,20 @@ final public class App implements AutoCloseable {
 
     
     private void loadData() {
-        m_CC = "1";
+        m_CC = "F"; //D for 'Germany', F for 'France', 1 for 'US'
         //m_Table = "1,2";
-        m_Date = "20131220";
+        m_Date = "20131213";
         m_Suffix = "_probe";
         m_NonTmcOnly = "0";
 
         int noOfBatches=10, noOfTablePerBatch=3;
-        for(int i=0;i<noOfBatches;i++){
-        	m_Table="";
-        	for(int j=1;j<=noOfTablePerBatch;j++){
+        for(int i=0;i<1;i++){
+        	
+        	m_Table="32";
+        	/*for(int j=1;j<=noOfTablePerBatch;j++){
         		if(j>1) m_Table+=",";
         		m_Table+=noOfTablePerBatch*i+j;
-        	}
+        	}*/
         	//System.out.println(m_Table);
         	
         	SimpleDateFormat formatter;
@@ -161,7 +162,7 @@ final public class App implements AutoCloseable {
              * Probe raw data download
              */
             String filedate = sdf.format(date);
-            String filename = path + filedate + "_"+m_Table + m_Suffix + ".csv";
+            String filename = path + filedate + "_"+m_CC+m_Table + m_Suffix + ".csv";
             File file = new File(filename);
             
             
