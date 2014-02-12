@@ -178,7 +178,7 @@ public class CorrelationAnalysis {
 			int MIN_NO_SAMPLES_IN_A_BIN=100;
 			double[] binsOfDensity=new double[INI_SIZE];//of probes;
 			
-			int noOfBins=100;int binStep=2;
+			int noOfBins=1000;int binStep=2;
 			double[] hardCodedBins=new double[noOfBins];
 			for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
 			
@@ -214,7 +214,7 @@ public class CorrelationAnalysis {
 			}
 			
 			//print out Title of the stats
-			String title="\t All Markets: HTTM-";
+			String title="\t All Markets in US: HTTM-";
 			if(isCongestion) title+="Congestion";
 			else title+="Free Flow";
 			title+=" on "+date;
@@ -223,9 +223,9 @@ public class CorrelationAnalysis {
 			System.out.println("densityRange,#ofEpochTMCPairs,avgDensity,avgError,avgQS");
 			for(int i=0;i<binIdx;i++){
 				if(i>0) System.out.print("["+String.format("%.1f", binsOfDensity[i])+"~");
-				else System.out.print("[1.0~");
+				else System.out.print("[ 1.0~");
 				if(i<binIdx-1) System.out.print(String.format("%.1f",binsOfDensity[i+1])+"],");
-				else System.out.print("Inf],");
+				else System.out.print("     ],");
 				System.out.print(cntOfDensity[i]+",");
 				System.out.println(
 						String.format("%.2f", avgDensity[i])
