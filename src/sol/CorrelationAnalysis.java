@@ -120,7 +120,7 @@ public class CorrelationAnalysis {
 					}
 					
 					//output the stats to a file
-					fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+".csv");
+					fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+"_"+country+".csv");
 					for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
 						fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
 					}
