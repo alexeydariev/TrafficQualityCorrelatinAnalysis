@@ -184,7 +184,7 @@ public class CorrelationAnalysis {
 			int MIN_NO_SAMPLES_IN_A_BIN=100;
 			double[] binsOfDensity=new double[INI_SIZE];//of probes;
 			
-			int noOfBins=1000;int binStep=2;
+			int noOfBins=8;int binStep=40;
 			double[] hardCodedBins=new double[noOfBins];
 			for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
 			
