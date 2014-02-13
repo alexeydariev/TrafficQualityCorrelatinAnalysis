@@ -47,8 +47,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		v4OutputStatResults();
-		//v4Attempt();
+		//v4OutputStatResults();
+		v4Attempt();
 		
 	}
 	
@@ -220,7 +220,7 @@ public class CorrelationAnalysis {
 			}
 			
 			//print out Title of the stats
-			String title="\t All Markets in US: HTTM-";
+			String title="\t All Markets in "+country+": HTTM-";
 			if(isCongestion) title+="Congestion";
 			else title+="Free Flow";
 			title+=" on "+date;
