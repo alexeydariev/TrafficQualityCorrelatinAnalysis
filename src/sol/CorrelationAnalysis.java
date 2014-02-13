@@ -72,7 +72,8 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		analysisVersion="v4_";	
-		String[] dates={"20131213"};
+		String[] dates={"20131212"};
+		String[] countries={"France"};
 		HashMap<String, EpochTMC> epochTMCPairs;
 		ArrayList<EpochTMC> epochTMCPairsWithGroundTruh=new ArrayList<EpochTMC>();
 		
@@ -80,49 +81,53 @@ public class CorrelationAnalysis {
 		
 		try{
 			//produce stat files
-			for(String date: dates){
-				for(int batch=0;batch<10;batch++){
-					String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
-					epochTMCPairs=readRawProbeFileOutputDensityByTMC(date+"_"+batchString+"_probe.csv",date , 180);
-					
-					//update the error of epochTMC pairs
-					BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+"ground_truth_"+date+".txt"));
-					String line;
-					while((line=br.readLine())!=null){
-						String[] fields=line.split(",");
-						String tmc=fields[10];
-						//get the epochIdx
-						int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
-						double error=Double.parseDouble(fields[30]);//capped difference
-						String engine=fields[11];
-						String isHyw=fields[12];
-						String flowType=fields[36];
+			for(String country: countries){
+				for(String date: dates){
+					for(int batch=0;batch<1;batch++){//TODO change this based on the country
+						//String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
+						String batchString="F32";
+						epochTMCPairs=readRawProbeFileOutputDensityByTMC(date+"_"+batchString+"_probe.csv",date , country, 180);
 						
-						String id=date+"-"+epochIdx+"-"+tmc;
-						if(epochTMCPairs.containsKey(id)){
-							EpochTMC epochTMC=epochTMCPairs.get(id);
-							epochTMC.error=error;
-							epochTMC.condition=engine+"-"+flowType+"-"+isHyw;
+						//update the error of epochTMC pairs
+						BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+country+"/groundtruth_"+date+"_"+country+".txt"));
+						String line;
+						while((line=br.readLine())!=null){
+							String[] fields=line.split(",");
+							String tmc=fields[10];
+							//get the epochIdx
+							int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
+							double error=Double.parseDouble(fields[30]);//capped difference
+							String engine=fields[11];
+							String isHyw=fields[12];
+							String flowType=fields[36];
+							
+							String id=date+"-"+epochIdx+"-"+tmc;
+							if(epochTMCPairs.containsKey(id)){
+								EpochTMC epochTMC=epochTMCPairs.get(id);
+								epochTMC.error=error;
+								epochTMC.condition=engine+"-"+flowType+"-"+isHyw;
+							}
 						}
+						br.close();
+						
+						//remove all pairs without ground truth
+						for(EpochTMC epochTMC: epochTMCPairs.values()){
+							if(epochTMC.error>0){//only keep epoch-tmc pairs with ground truth 
+								epochTMCPairsWithGroundTruh.add(epochTMC);
+							}
+						}					
+						
 					}
-					br.close();
 					
-					//remove all pairs without ground truth
-					for(EpochTMC epochTMC: epochTMCPairs.values()){
-						if(epochTMC.error>0){//only keep epoch-tmc pairs with ground truth 
-							epochTMCPairsWithGroundTruh.add(epochTMC);
-						}
-					}					
-					
-				}
-				
-				//output the stats to a file
-				fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+".csv");
-				for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
-					fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
-				}
-				fw.close();
-			}	
+					//output the stats to a file
+					fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+".csv");
+					for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
+						fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
+					}
+					fw.close();
+				}	
+			}
+			
 			
 			
 			
@@ -131,11 +136,11 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public ArrayList<EpochTMC> v4ReadStatResult(String date, String engine, boolean congestion){
+	public ArrayList<EpochTMC> v4ReadStatResult(String date, String country, String engine, boolean congestion){
 		ArrayList<EpochTMC> epochTMCs=new ArrayList<EpochTMC>();
 		//read stat file and analyze
 		try{
-			Scanner sc=new Scanner(new File(Constants.BIN_FOLDER+"v4_"+date+".csv"));
+			Scanner sc=new Scanner(new File(Constants.BIN_FOLDER+"v4_"+date+"_"+country+".csv"));
 			while(sc.hasNextLine()){
 				String line=sc.nextLine();
 				String[] fields=line.split(",");
@@ -158,9 +163,10 @@ public class CorrelationAnalysis {
 		String engine="HTTM";
 		boolean[] isCongestions={false, true};
 		String date="20131212";
+		String country="France";
 		
 		for(boolean isCongestion: isCongestions){
-			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult(date,engine, isCongestion);
+			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult(date,country, engine, isCongestion);
 			//sort epochTMC based on # of probes
 			Collections.sort(epochTMCs, new Comparator() 
 			{
@@ -214,7 +220,7 @@ public class CorrelationAnalysis {
 			}
 			
 			//print out Title of the stats
-			String title="\t All Markets in US: HTTM-";
+			String title="\t All Markets in "+country+": HTTM-";
 			if(isCongestion) title+="Congestion";
 			else title+="Free Flow";
 			title+=" on "+date;
@@ -406,13 +412,13 @@ public class CorrelationAnalysis {
 	}
 	
 	
-	public HashMap<String, EpochTMC> readRawProbeFileOutputDensityByTMC(String fileName, String date, int epochSize){
+	public HashMap<String, EpochTMC> readRawProbeFileOutputDensityByTMC( String fileName, String date,String country, int epochSize){
 		HashMap<String, EpochTMC> epochTMCPairs=new HashMap<String, EpochTMC>();
 		
 		String line="";
 		try{
 			//analyze 
-			String filePath=Constants.PROBE_RAW_DATA+date+"/"+fileName;
+			String filePath=Constants.PROBE_RAW_DATA+country+"/"+date+"/"+fileName;
 			BufferedReader br = new BufferedReader(new FileReader(filePath));
 			int cnt=0;
 			while ((line = br.readLine()) != null) {
