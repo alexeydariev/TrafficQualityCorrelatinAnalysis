@@ -73,19 +73,31 @@ public class CorrelationAnalysis {
 	public void v4OutputStatResults(){
 		analysisVersion="v4_";	
 		String[] dates={"20131212"};
-		String[] countries={"France"};
+		String[] countries={"US"};
 		HashMap<String, EpochTMC> epochTMCPairs;
 		ArrayList<EpochTMC> epochTMCPairsWithGroundTruh=new ArrayList<EpochTMC>();
 		
 		FileWriter fw;
 		
 		try{
+			
+			
 			//produce stat files
 			for(String country: countries){
 				for(String date: dates){
-					for(int batch=0;batch<1;batch++){//TODO change this based on the country
-						//String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
-						String batchString="F32";
+					int noOfBatches=10;
+					switch(country){
+					case "US":
+						noOfBatches=10;
+						break;
+					case "France":
+						noOfBatches=1;
+					}
+					for(int batch=6;batch<7;batch++){//TODO change this based on the country
+						String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
+						if(country.equals("France")){
+							batchString="F32";
+						}
 						epochTMCPairs=readRawProbeFileOutputDensityByTMC(date+"_"+batchString+"_probe.csv",date , country, 180);
 						
 						//update the error of epochTMC pairs
@@ -120,7 +132,7 @@ public class CorrelationAnalysis {
 					}
 					
 					//output the stats to a file
-					fw=new FileWriter(Constants.BIN_FOLDER+analysisVersion+date+"_"+country+".csv");
+					fw=new FileWriter(Constants.RESULT_DATA+analysisVersion+date+"_"+country+".csv");
 					for(EpochTMC epochTMC: epochTMCPairsWithGroundTruh){
 						fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
 					}
@@ -140,7 +152,7 @@ public class CorrelationAnalysis {
 		ArrayList<EpochTMC> epochTMCs=new ArrayList<EpochTMC>();
 		//read stat file and analyze
 		try{
-			Scanner sc=new Scanner(new File(Constants.BIN_FOLDER+"v4_"+date+"_"+country+".csv"));
+			Scanner sc=new Scanner(new File(Constants.RESULT_DATA+"v4_"+date+"_"+country+".csv"));
 			while(sc.hasNextLine()){
 				String line=sc.nextLine();
 				String[] fields=line.split(",");
@@ -163,7 +175,7 @@ public class CorrelationAnalysis {
 		String engine="HTTM";
 		boolean[] isCongestions={false, true};
 		String date="20131212";
-		String country="France";
+		String country="US";
 		
 		for(boolean isCongestion: isCongestions){
 			ArrayList<EpochTMC> epochTMCs=v4ReadStatResult(date,country, engine, isCongestion);
@@ -181,10 +193,10 @@ public class CorrelationAnalysis {
 			});
 			//TODO parameters		
 			int INI_SIZE=1000;
-			int MIN_NO_SAMPLES_IN_A_BIN=100;
+			int MIN_NO_SAMPLES_IN_A_BIN=10;
 			double[] binsOfDensity=new double[INI_SIZE];//of probes;
 			
-			int noOfBins=8;int binStep=40;
+			int noOfBins=8;int binStep=10;
 			double[] hardCodedBins=new double[noOfBins];
 			for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
 			
@@ -200,7 +212,7 @@ public class CorrelationAnalysis {
 			
 			int nextHardCodedBinIdx=1;
 			for(EpochTMC epochTMC: epochTMCs){
-				if(binIdx<binsOfDensity.length&&cntOfDensity[binIdx-1]>MIN_NO_SAMPLES_IN_A_BIN
+				if(binIdx<binsOfDensity.length&&cntOfDensity[binIdx-1]>=MIN_NO_SAMPLES_IN_A_BIN
 		&&nextHardCodedBinIdx<hardCodedBins.length&&epochTMC.noOfProbes>hardCodedBins[nextHardCodedBinIdx]){
 					binsOfDensity[binIdx]=epochTMC.noOfProbes;
 					binIdx++;
@@ -431,10 +443,14 @@ public class CorrelationAnalysis {
 				else tmc+="N";
 				tmc+=fields[Constants.IDX_TMC_POINT_LOC_CODE];
 				
-				DateFormat simpDateFormat=new SimpleDateFormat("YYYY-MM-DD HH:MM:SS");
+				DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
 				Date systeTimestamp=simpDateFormat.parse(fields[Constants.IDX_SYS_DATE]);
 				int epochIdx=(systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds())
 						/epochSize;
+				if(epochIdx==220&&tmc.equals("120P04846")){
+					//System.out.println(systeTimestamp);
+					System.out.println(line);
+				}
 				
 				String id=date+"-"+epochIdx+"-"+tmc;
 				
