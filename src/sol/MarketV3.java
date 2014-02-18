@@ -96,11 +96,15 @@ class EpochTMC {
 	
 	public boolean covered; //true if have real-time data
 	
-	public int noOfProbes;
+	public double noOfProbes;
 	public HashSet<String> vehicleSet;
 	public int noOfVehicles;
 	public HashSet<String> providerSet;
 	public int noOfProviders;
+	public double noOfProbesPerMile;
+	
+	
+	public double fieldToBeSorted;
 	
 	public double error;//diff between the GT and the predicated speed	
 	public String condition;
@@ -120,6 +124,10 @@ class EpochTMC {
 		this.condition=condition;
 	}
 	
+	public void setToBeSortedField(double value){
+		fieldToBeSorted=value;
+	}
+	
 	
 	public String getID(){
 		return date+"-"+epochIdx+"-"+tmc;
@@ -127,7 +135,9 @@ class EpochTMC {
 	
 	//serialize
 	public String toString(){
-		return date+","+epochIdx+","+tmc+","+condition+","+noOfProbes+","+vehicleSet.size()+","+providerSet.size()+","+error;
+		return date+","+epochIdx+","+tmc+","+condition
+				+","+(int)noOfProbes+","+String.format("%.2f", noOfProbesPerMile)
+				+","+vehicleSet.size()+","+providerSet.size()+","+error;
 	}
 	
 	

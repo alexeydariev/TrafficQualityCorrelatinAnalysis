@@ -9,9 +9,11 @@ public final class Constants {
 	public static final String BIN_FOLDER=PROJECT_FOLDER+"bin/";
 	public static final String DATA_FOLDER=PROJECT_FOLDER+"data/";
 	public static final String PROBE_RAW_DATA=DATA_FOLDER+"raw/";
-	public static final String PROBE_STAT_DATA=DATA_FOLDER+"stat/";
+	
 	public static final String RESULT_DATA=DATA_FOLDER+"res/";
-	public static final String MAP_DATA=DATA_FOLDER+"map/";
+	public static final String V2_RES_DATA=RESULT_DATA+"v2/";
+	public static final String V4_RES_DATA=RESULT_DATA+"v4/";
+	public static final String TMC_DATA=DATA_FOLDER+"tmc/";
 	public static final String GROUND_TRUTH_DATA=DATA_FOLDER+"ground_truth/";
 	
 	
