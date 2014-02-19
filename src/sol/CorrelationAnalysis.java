@@ -244,7 +244,7 @@ public class CorrelationAnalysis {
 		//v4OutputStatResults();
 		String engine="HTTM";
 		boolean[] isCongestions={false, true};
-		String[] dates={"20131213","20131220"};//"20131212","20131213","20131220","20140205"
+		String[] dates={"20131212","20131213","20131220"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
 				
 		for(boolean isCongestion: isCongestions){
