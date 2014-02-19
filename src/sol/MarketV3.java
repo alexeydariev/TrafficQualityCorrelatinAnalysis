@@ -117,11 +117,15 @@ class EpochTMC {
 		providerSet=new HashSet<String>();		
 	}
 	
-	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition){
+	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition){
 		this(date, tmc, epochIdx);
-		this.covered=covered;
 		this.error=error;
 		this.condition=condition;
+	}
+	
+	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition){
+		this(date, tmc, epochIdx,error,condition);
+		this.covered=covered;
 	}
 	
 	public void setToBeSortedField(double value){

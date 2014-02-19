@@ -17,6 +17,7 @@ import java.util.Properties;
 
 import javax.xml.bind.JAXBContext;
 
+import sol.Constants;
 import sol.CorrelationAnalysis;
 
 import java.util.zip.GZIPOutputStream;
@@ -43,9 +44,10 @@ final public class App implements AutoCloseable {
     App() throws Exception {
 
         //identify folder path external to jar file
-        this.path = App.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        this.path = this.path.substring(0, this.path.lastIndexOf("/") + 1);
-
+        //this.path = App.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        //this.path = this.path.substring(0, this.path.lastIndexOf("/") + 1);
+    	this.path=Constants.PROBE_RAW_DATA;
+    	
         //analysis instance
         analysis=new CorrelationAnalysis();
         

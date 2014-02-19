@@ -29,6 +29,7 @@ import javax.swing.text.AbstractDocument.LeafElement;
 import org.apache.commons.math3.analysis.function.Exp;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
 import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 import com.sun.xml.internal.ws.policy.EffectivePolicyModifier;
@@ -73,8 +74,8 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		analysisVersion="v4_";	
-		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
-		String[] countries={"France"};//US, France
+		String[] dates={"20140205"};//"20131212","20131213","20131220","20140205"
+		String[] countries={"US"};//US, France
 		
 		FileWriter fw;
 		HashMap<String, TMC> tmcAttr=null;		
@@ -83,6 +84,45 @@ public class CorrelationAnalysis {
 			//produce stat files
 			for(String country: countries){
 				for(String date: dates){
+					//load epochTMCs from groundtruth
+					HashMap<String, EpochTMC> epochTMCs=new HashMap<String, EpochTMC>(); 
+					String filePath=Constants.GROUND_TRUTH_DATA+country+"/groundtruth_"+date+"_"+country+".txt";
+					BufferedReader br = new BufferedReader(new FileReader(filePath));
+					String line;
+					int lineCnt=0;
+					while((line=br.readLine())!=null){
+						lineCnt+=1;
+						String[] fields=line.split(",");
+						String tmc=fields[10];
+						//get the epochIdx
+						int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
+						double error=Double.parseDouble(fields[30]);//capped difference
+						String engine=fields[11];
+						String isHyw=fields[12];
+						String flowType=fields[35];//36
+						if(!engine.equals("HTTM")||!isHyw.equals("Y")) continue;
+						
+						String condition=engine+"-"+flowType+"-"+isHyw;	
+						
+						String id=date+"-"+epochIdx+"-"+tmc;//+"-"+condition;
+						EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition);
+						if(epochTMCs.containsKey(id)){
+							if(!epochTMCs.get(id).condition.equals(condition)){
+								/*System.out.println(id+"  epoch: "+fields[8]);
+								System.out.println(epochTMCs.get(id));
+								System.out.println(line);*/
+							}
+						}
+						epochTMCs.put(id, epochTMC);
+						epochTMC.error=error;
+					}
+					System.out.println("read "+lineCnt+" lines; "+epochTMCs.size()+" pairs (HTTM) loaded from groundtruth file");
+					br.close();
+					//if(true) return;
+					
+					/**
+					 * read raw probe data file and count
+					 */
 					int noOfBatches=11;
 					switch(country){
 					case "US":
@@ -93,34 +133,6 @@ public class CorrelationAnalysis {
 						tmcAttr=loadTMC("FRA");
 						noOfBatches=1;
 					}
-					
-					//load epochTMCs from groundtruth
-					HashMap<String, EpochTMC> epochTMCs=new HashMap<String, EpochTMC>(); 
-					BufferedReader br = new BufferedReader(new FileReader(Constants.GROUND_TRUTH_DATA+country+"/groundtruth_"+date+"_"+country+".txt"));
-					String line;
-					while((line=br.readLine())!=null){
-						String[] fields=line.split(",");
-						String tmc=fields[10];
-						//get the epochIdx
-						int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
-						double error=Double.parseDouble(fields[30]);//capped difference
-						String engine=fields[11];
-						String isHyw=fields[12];
-						String flowType=fields[36];
-						
-						String id=date+"-"+epochIdx+"-"+tmc;
-						EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx);
-						epochTMCs.put(id, epochTMC);
-						epochTMC.error=error;
-						epochTMC.condition=engine+"-"+flowType+"-"+isHyw;						
-					}
-					System.out.println(epochTMCs.size()+" pairs loaded from groundtruth file");
-					br.close();
-					
-					
-					/**
-					 * read raw probe data file and count
-					 */
 					for(int batch=0;batch<noOfBatches;batch++){//TODO change this based on the country
 						String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
 						if(country.equals("France")){
@@ -128,7 +140,7 @@ public class CorrelationAnalysis {
 							if(batch==1) break;
 						}
 					
-						String filePath=Constants.PROBE_RAW_DATA+country+"/"+date+"/"+date+"_"+batchString+"_probe.csv";
+						filePath=Constants.PROBE_RAW_DATA+country+"/"+date+"/"+date+"_"+batchString+"_probe.csv";
 						BufferedReader brr = new BufferedReader(new FileReader(filePath));
 						int probeCnt=0, updateProbeCnt=0;
 						while ((line = brr.readLine()) != null) {
@@ -217,23 +229,32 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public ArrayList<EpochTMC> v4ReadStatResult(String date, String country, String engine, boolean congestion){
-		ArrayList<EpochTMC> epochTMCs=new ArrayList<EpochTMC>();
+	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(String date, String country, String engine){
+		HashMap<String,ArrayList<EpochTMC>> epochTMCs=new HashMap<String,ArrayList<EpochTMC>>();
+		epochTMCs.put("Free", new ArrayList<EpochTMC>());
+		epochTMCs.put("Congestion", new ArrayList<EpochTMC>());
+		
 		//read stat file and analyze
 		try{
 			Scanner sc=new Scanner(new File(Constants.V4_RES_DATA+"v4_"+date+"_"+country+".csv"));
+			int lineCnt=0;
 			while(sc.hasNextLine()){
+				lineCnt++;
 				String line=sc.nextLine();
 				String[] fields=line.split(",");
 				EpochTMC epochTMC=new EpochTMC(fields[0], fields[2], Integer.parseInt(fields[1]));
 				epochTMC.condition=fields[3];
-				if(!epochTMC.condition.startsWith(engine)||
-				!(epochTMC.condition.contains("Free")^congestion) ) continue;
+				if(!epochTMC.condition.startsWith(engine)){
+					continue;
+				}
 				epochTMC.noOfProbes=Integer.parseInt(fields[4]);
 				epochTMC.noOfProbesPerMile=Double.parseDouble(fields[5]);
 				epochTMC.error=Math.abs(Double.parseDouble(fields[fields.length-1]) );
-				epochTMCs.add(epochTMC);
+			
+				if(epochTMC.condition.contains("Free")) epochTMCs.get("Free").add(epochTMC);
+				else epochTMCs.get("Congestion").add(epochTMC);
 			}
+			System.out.println(date+" "+country+" line cnt:"+lineCnt+" free: "+epochTMCs.get("Free").size()+" congestion: "+epochTMCs.get("Congestion").size() );
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
@@ -242,15 +263,33 @@ public class CorrelationAnalysis {
 	
 	public void v4Attempt(){
 		//v4OutputStatResults();
-		String engine="HTTM";
 		boolean[] isCongestions={false, true};
-		String[] dates={"20131212","20131213","20131220"};//"20131212","20131213","20131220","20140205"
+		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
+
 		String country="US";//US, France
-				
+			
+		
+		HashMap<String, ArrayList<EpochTMC>> allPairs=new HashMap<String, ArrayList<EpochTMC>>();
+		allPairs.put("Free", new ArrayList<EpochTMC>());
+		allPairs.put("Congestion", new ArrayList<EpochTMC>());
+		
+		//print out Title of the stats
+		String title="\t All Markets in "+country+": HTTM-";
+		title+=" on ";	
+		for(String date: dates){
+			title+=date+" ";
+			HashMap<String, ArrayList<EpochTMC>> pairs=v4ReadStatResult(date,country, "HTTM");
+			allPairs.get("Free").addAll(pairs.get("Free"));
+			allPairs.get("Congestion").addAll(pairs.get("Congestion"));
+		}	
+		
 		for(boolean isCongestion: isCongestions){
+			if(isCongestion) title+="Congestion";
+			else title+="Free Flow";
+			
 			//TODO parameters		
 			int INI_SIZE=1000;
-			int MIN_NO_SAMPLES_IN_A_BIN=50;
+			int MIN_NO_SAMPLES_IN_A_BIN=2000;
 			double[] lowerBoundOfBin=new double[INI_SIZE];//of probes;
 			
 			int noOfBins=1000;int binStep=1;
@@ -260,25 +299,19 @@ public class CorrelationAnalysis {
 					
 			double[] avgProbeCnt=new double[INI_SIZE];
 			double[] avgProbeCntPerMile=new double[INI_SIZE];
+			HashMap<Integer, ArrayList<Double>> valuesWithinBin=new HashMap<Integer,ArrayList<Double>>();
+			for(int i=0;i<INI_SIZE;i++) valuesWithinBin.put(i, new ArrayList<Double>());
+			
 			double[] avgQualityScore=new double[INI_SIZE];
 			double[] avgErrors=new double[INI_SIZE];
 			int[] pairCnt=new int[INI_SIZE];
 			int[] cntOfErrorAboveTreshold=new int[INI_SIZE];
 			int binIdx=1;
 			
-			//print out Title of the stats
-			String title="\t All Markets in "+country+": HTTM-";
-			if(isCongestion) title+="Congestion";
-			else title+="Free Flow";
-			title+=" on ";		
-			
-			
-			ArrayList<EpochTMC> epochTMCs=new ArrayList<EpochTMC>();
-			for(String date: dates){
-				title+=date+" ";
-				epochTMCs.addAll(v4ReadStatResult(date,country, engine, isCongestion) );
-			}	
-				
+			ArrayList<EpochTMC> epochTMCs;
+			if(!isCongestion) epochTMCs=allPairs.get("Free");
+			else epochTMCs=allPairs.get("Congestion");
+							
 			for(EpochTMC epochTMC:epochTMCs){
 				//TODO define the field to be ranked
 				//epochTMC.setToBeSortedField(epochTMC.noOfProbes);
@@ -304,6 +337,7 @@ public class CorrelationAnalysis {
 			
 			int nextHardCodedBinIdx=0;
 			double lastValue=-1;
+			int cnt=0;
 			for(EpochTMC epochTMC: epochTMCs){					
 				if(binIdx<lowerBoundOfBin.length&&pairCnt[binIdx-1]>=MIN_NO_SAMPLES_IN_A_BIN
 		&&nextHardCodedBinIdx<hardCodedBins.length&&epochTMC.fieldToBeSorted>hardCodedBins[nextHardCodedBinIdx]
@@ -313,24 +347,50 @@ public class CorrelationAnalysis {
 					nextHardCodedBinIdx++;
 				}
 				lastValue=epochTMC.fieldToBeSorted;
-									
+						
+				cnt++;
+				
 				pairCnt[binIdx-1]+=1;
 				avgErrors[binIdx-1]+=epochTMC.error;
 				avgProbeCnt[binIdx-1]+=epochTMC.noOfProbes;
 				avgProbeCntPerMile[binIdx-1]+=epochTMC.noOfProbesPerMile;
+				valuesWithinBin.get(binIdx-1).add(epochTMC.error);
 				if(epochTMC.error>10) cntOfErrorAboveTreshold[binIdx-1]++;
+				
+				/*if(!isCongestion&&avgProbeCnt[b]>30){
+					System.out.println("density :" + avgProbeCnt[i]);
+					System.out.println(valuesWithinBin.get(i));
+				}*/
 			}			
 			
 			
 			System.out.println(title);
 			//System.out.println("densityIdx="+binIdx);
+			Variance variance=new Variance();
+			Mean mean=new Mean();
+			double[] stds=new double[binIdx];
+			
+			double sum=0;
 			for(int i=0;i<binIdx;i++){
 				avgErrors[i]/=pairCnt[i];
 				avgProbeCnt[i]/=pairCnt[i];
 				avgProbeCntPerMile[i]/=pairCnt[i];
 				avgQualityScore[i]=((int)((1-(cntOfErrorAboveTreshold[i]+0.0)/pairCnt[i])*10000))/100.0;
+								
+				ArrayList<Double> values=valuesWithinBin.get(i);
+				double[] vs=new double[values.size()];
+				for(int j=0;j<vs.length;j++){
+					vs[j]=values.get(j);
+				}
+				double avg=mean.evaluate(vs);
+				double std=Math.sqrt(variance.evaluate(vs, avg) );
+				stds[i]=std;
+				
+				sum+=pairCnt[i];
+				//System.out.println(avgProbeCnt[i]+" "+avgProbeCntPerMile[i]+" "+avgErrors[i]+""+avg+" "+std);
 			}
 			
+			System.out.println("cnt="+cnt+" sum="+sum);
 			
 			System.out.println("densityRange,#ofEpochTMCPairs,avgDensity,avgError,avgQS");
 			for(int i=0;i<binIdx;i++){
@@ -340,10 +400,13 @@ public class CorrelationAnalysis {
 				else System.out.print("     ],");
 				System.out.print(pairCnt[i]+",");
 				System.out.println(
-						String.format("%.2f", avgProbeCnt[i])
-						+","+String.format("%.2f", avgProbeCntPerMile[i])
+						//String.format("%.2f", avgProbeCnt[i])
+						//+","+
+						String.format("%.2f", avgProbeCntPerMile[i])
 						+","+String.format("%.2f", avgErrors[i])
 						+","+avgQualityScore[i]+"%"
+						//+","+String.format("%.2f", stds[i])+"%"
+						
 				);
 			}
 			
@@ -352,6 +415,7 @@ public class CorrelationAnalysis {
 			avgProbeCntPerMile=Arrays.copyOf(avgProbeCntPerMile, binIdx);
 			avgErrors=Arrays.copyOf(avgErrors, binIdx);
 			avgQualityScore=Arrays.copyOf(avgQualityScore, binIdx);
+			
 			
 			PearsonsCorrelation pc=new PearsonsCorrelation();
 			System.out.println("correlation between avgProbeCnt and avgError is "+String.format("%.2f", pc.correlation(avgProbeCnt, avgErrors)));
