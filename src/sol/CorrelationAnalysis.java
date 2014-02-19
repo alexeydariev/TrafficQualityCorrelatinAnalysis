@@ -289,7 +289,7 @@ public class CorrelationAnalysis {
 			
 			//TODO parameters		
 			int INI_SIZE=1000;
-			int MIN_NO_SAMPLES_IN_A_BIN=2000;
+			int MIN_NO_SAMPLES_IN_A_BIN=100;
 			double[] lowerBoundOfBin=new double[INI_SIZE];//of probes;
 			
 			int noOfBins=1000;int binStep=1;
