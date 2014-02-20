@@ -49,8 +49,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		//v4OutputStatResults();
-		v4Attempt();
+		v4OutputStatResults();
+		//v4Attempt();
 		
 	}
 	
@@ -74,8 +74,8 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		analysisVersion="v4_";	
-		String[] dates={"20140205"};//"20131212","20131213","20131220","20140205"
-		String[] countries={"US"};//US, France
+		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
+		String[] countries={"France"};//US, France
 		
 		FileWriter fw;
 		HashMap<String, TMC> tmcAttr=null;		
