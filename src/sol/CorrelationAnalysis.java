@@ -106,6 +106,8 @@ public class CorrelationAnalysis {
 						
 						String id=date+"-"+epochIdx+"-"+tmc;//+"-"+condition;
 						EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition);
+					
+						
 						if(epochTMCs.containsKey(id)){
 							if(!epochTMCs.get(id).condition.equals(condition)){
 								/*System.out.println(id+"  epoch: "+fields[8]);
@@ -116,6 +118,7 @@ public class CorrelationAnalysis {
 						epochTMCs.put(id, epochTMC);
 						epochTMC.error=error;
 					}
+					
 					System.out.println("read "+lineCnt+" lines; "+epochTMCs.size()+" pairs (HTTM) loaded from groundtruth file");
 					br.close();
 					//if(true) return;
@@ -150,8 +153,18 @@ public class CorrelationAnalysis {
 								if(fields.length!=Constants.IDX_TMC_POINT_LOC_CODE+1) continue;
 								
 								String tmc=fields[Constants.IDX_CTY_CODE]+fields[Constants.IDX_TABLE_ID];
-								if(fields[Constants.IDX_TMC_DIR].equals("+")) tmc+="P";
-								else tmc+="N";
+								if(fields[Constants.IDX_TMC_DIR].equals("+")||
+										fields[Constants.IDX_TMC_DIR].equals("P")	
+										) tmc+="P";
+								else{
+									if(fields[Constants.IDX_TMC_DIR].equals("-")||
+											fields[Constants.IDX_TMC_DIR].equals("N")	
+											)
+									tmc+="N";
+									else {
+										continue;
+									}
+								}
 								tmc+=fields[Constants.IDX_TMC_POINT_LOC_CODE];
 								
 								DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
@@ -176,7 +189,16 @@ public class CorrelationAnalysis {
 								epochTMC.noOfProbes+=1;
 								epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
 								epochTMC.vehicleSet.add(fields[Constants.IDX_PROBE_ID]);
-								epochTMC.providerSet.add(fields[Constants.IDX_VENDOR_DESC]);	
+								epochTMC.providerSet.add(fields[Constants.IDX_VENDOR_DESC]);
+								
+								
+								/**
+								 * debug
+								 */
+								if(epochTMC.tmc.equals("106P05000")&&epochTMC.epochIdx==408){
+									System.out.println(line);
+									System.out.println("no.of probs:"+epochTMC.noOfProbes);
+								}
 							}catch(Exception ex){
 								System.out.println(line);
 								ex.printStackTrace();
@@ -196,6 +218,7 @@ public class CorrelationAnalysis {
 					}	
 					System.out.println("# of pairs is "+epochTMCs.size()+" # of pairs with rt probes is "+cnt+ "  percentage is "+String.format("%.2f", (cnt+0.0)/epochTMCs.size()) );
 					
+					//if(true) return;
 					
 					//output the stats to a file
 					fw=new FileWriter(Constants.V4_RES_DATA+analysisVersion+date+"_"+country+".csv");
@@ -203,9 +226,9 @@ public class CorrelationAnalysis {
 					ArrayList<EpochTMC> pairs=new ArrayList<EpochTMC>();
 					for(EpochTMC epochTMC: epochTMCs.values()) pairs.add(epochTMC);
 					//sort epochTMC based on time
-					Collections.sort(pairs, new Comparator() 
+					Collections.sort(pairs, new Comparator<EpochTMC>() 
 					{
-					    public int compare(Object o1, Object o2) 
+					    public int compare(EpochTMC o1, EpochTMC o2) 
 					    {
 					       if(o1 instanceof EpochTMC && o2 instanceof EpochTMC) 
 					       {
@@ -286,7 +309,7 @@ public class CorrelationAnalysis {
 		boolean[] isCongestions={false, true};
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 
-		String country="US";//US, France
+		String country="France";//US, France
 			
 		
 		HashMap<String, ArrayList<EpochTMC>> allPairs=new HashMap<String, ArrayList<EpochTMC>>();
@@ -339,9 +362,9 @@ public class CorrelationAnalysis {
 				epochTMC.setToBeSortedField(epochTMC.noOfProbesPerMile);
 			}				
 			//sort epochTMC based on # of probes
-			Collections.sort(epochTMCs, new Comparator() 
+			Collections.sort(epochTMCs, new Comparator<EpochTMC>() 
 			{
-			    public int compare(Object o1, Object o2) 
+			    public int compare(EpochTMC o1, EpochTMC o2) 
 			    {
 			       if(o1 instanceof EpochTMC && o2 instanceof EpochTMC) 
 			       {
