@@ -150,25 +150,29 @@ public class CorrelationAnalysis {
 							try{
 								probeCnt+=1;
 								String[] fields=line.split(",");
-								if(fields.length!=Constants.IDX_TMC_POINT_LOC_CODE+1) continue;
+								if(fields.length!=Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE+1) continue;
 								
-								String tmc=fields[Constants.IDX_CTY_CODE]+fields[Constants.IDX_TABLE_ID];
-								if(fields[Constants.IDX_TMC_DIR].equals("+")||
-										fields[Constants.IDX_TMC_DIR].equals("P")	
+								//throw away low speed data
+								double speed=Double.parseDouble(fields[Constants.RAW_PROBE_IDX_SPEED]);
+								if(speed<1) continue;
+								
+								String tmc=fields[Constants.RAW_PROBE_IDX_CTY_CODE]+fields[Constants.RAW_PROBE_IDX_TABLE_ID];
+								if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("+")||
+										fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("P")	
 										) tmc+="P";
 								else{
-									if(fields[Constants.IDX_TMC_DIR].equals("-")||
-											fields[Constants.IDX_TMC_DIR].equals("N")	
+									if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("-")||
+											fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("N")	
 											)
 									tmc+="N";
 									else {
 										continue;
 									}
 								}
-								tmc+=fields[Constants.IDX_TMC_POINT_LOC_CODE];
+								tmc+=fields[Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE];
 								
 								DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
-								Date systeTimestamp=simpDateFormat.parse(fields[Constants.IDX_SYS_DATE]);
+								Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SYS_DATE]);
 								int epochIdx=(systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds())
 										/180;
 								/*if(epochIdx==220&&tmc.equals("120P04846")){
@@ -188,8 +192,8 @@ public class CorrelationAnalysis {
 								}
 								epochTMC.noOfProbes+=1;
 								epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
-								epochTMC.vehicleSet.add(fields[Constants.IDX_PROBE_ID]);
-								epochTMC.providerSet.add(fields[Constants.IDX_VENDOR_DESC]);
+								epochTMC.vehicleSet.add(fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]);
+								epochTMC.providerSet.add(fields[Constants.RAW_PROBE_IDX_VENDOR_DESC]);
 								
 								
 								/**
@@ -274,7 +278,7 @@ public class CorrelationAnalysis {
 					}
 					epochTMC.noOfProbes=Integer.parseInt(fields[4]);
 					epochTMC.noOfProbesPerMile=Double.parseDouble(fields[5]);
-					epochTMC.error=Math.abs(Double.parseDouble(fields[fields.length-1]) );
+					epochTMC.error=Double.parseDouble(fields[fields.length-1]);
 				
 					if(epochTMC.condition.contains("Free")) epochTMCs.get("Free").add(epochTMC);
 					else epochTMCs.get("Congestion").add(epochTMC);
@@ -395,7 +399,7 @@ public class CorrelationAnalysis {
 				cnt++;
 				
 				pairCnt[binIdx-1]+=1;
-				avgErrors[binIdx-1]+=epochTMC.error;
+				avgErrors[binIdx-1]+=Math.abs(epochTMC.error);
 				avgProbeCnt[binIdx-1]+=epochTMC.noOfProbes;
 				avgProbeCntPerMile[binIdx-1]+=epochTMC.noOfProbesPerMile;
 				valuesWithinBin.get(binIdx-1).add(epochTMC.error);//add error into the bin
@@ -431,19 +435,23 @@ public class CorrelationAnalysis {
 				//plot
 				//if(isCongestion)
 				if(i<3||binIdx-i<=3){//plot the distribution
-					String figTitle=i+" th bin: "+lowerBoundOfBin[binIdx];
+					String cond;
+					if(isCongestion) cond="Congestion";
+					else cond="Free";
+					
+					String figTitle=cond+"_"+i+" th bin: "+lowerBoundOfBin[binIdx];
 					if(i>0){
 						figTitle+=" ~ ";
 						if(i<binIdx-1) figTitle+=lowerBoundOfBin[binIdx+1];
 					}
-					String cond;
-					if(isCongestion) cond="Congestion";
-					else cond="Free";
-					Plot.histogram(figTitle, vs, 10, Constants.V4_RES_DATA+"figs/"+cond+"_"+i+".jpg");
+					Plot.histogram(figTitle, vs, 20, Constants.V4_RES_DATA+"figs/"+cond+"_"+i+".jpg");
+					
 				}
 				
 				
-				
+				for(int j=0;j<vs.length;j++){
+					vs[j]=Math.abs(vs[j] );
+				}
 				double avg=mean.evaluate(vs);
 				double std=Math.sqrt(variance.evaluate(vs, avg) );
 				stds[i]=std;
@@ -877,7 +885,7 @@ public class CorrelationAnalysis {
 				String tmc=fields[0];
 				probeCnts.put(tmc, Integer.parseInt(fields[1]));
 				vehicleCnts.put(tmc, new HashSet<String>());
-				vehicleCnts.get(tmc).add(fields[Constants.IDX_PROBE_ID]);
+				vehicleCnts.get(tmc).add(fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]);
 			}
 			Connection netezza=initilize("Netezza");
 			sc.close();

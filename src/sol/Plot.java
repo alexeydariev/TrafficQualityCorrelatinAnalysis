@@ -40,6 +40,7 @@ public class Plot {
 			Plot2DPanel plot = new Plot2DPanel();
 			// add the histogram of x to the PlotPanel
 			plot.addHistogramPlot(title, values, noOfBins);
+			
 			Max max=new Max();
 			plot.setFixedBounds(0, 0, max.evaluate(values)+1);
 			
@@ -53,9 +54,9 @@ public class Plot {
 			
 			File savedFile=new File(saveFilePath);
 			//System.out.println(savedFile.getCanonicalPath());
-			plot.toGraphicFile(savedFile);//need a frame to run
+			//plot.toGraphicFile(savedFile);//need a frame to run
 						
-			frame.dispose();
+			//frame.dispose();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -113,7 +113,7 @@ final public class App implements AutoCloseable {
             System.out.println("path="+app.path);
         	//raw probe data will be loaded daily, but corroboration will only be done on Mondays
             
-            app.loadData();
+            app.downloadData();
             LOG.closeLog();
             System.exit(0);
         } catch (Exception e) {
@@ -126,10 +126,10 @@ final public class App implements AutoCloseable {
     }
 
     
-    private void loadData() {
+    private void downloadData() {
         m_CC = "1"; //D for 'Germany', F for 'France', 1 for 'US'
         //m_Table = "1,2";
-        m_Date = "20140205";
+        m_Date = "20140210";
         m_Suffix = "_probe";
         m_NonTmcOnly = "0";
 
