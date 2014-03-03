@@ -13,6 +13,7 @@ public final class Constants {
 	public static final String RESULT_DATA=DATA_FOLDER+"res/";
 	public static final String V2_RES_DATA=RESULT_DATA+"v2/";
 	public static final String V4_RES_DATA=RESULT_DATA+"v4/";
+	public static final String V5_RES_DATA=RESULT_DATA+"v5/";
 	public static final String TMC_DATA=DATA_FOLDER+"tmc/";
 	public static final String GROUND_TRUTH_DATA=DATA_FOLDER+"ground_truth/";
 	
