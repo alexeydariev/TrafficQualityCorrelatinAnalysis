@@ -11,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLClientInfoException;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -74,7 +75,7 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		
-		String[] dates={"20131212","20131213","20131220","20140205"};//,"20140206","20140210"};//"20131212","20131213","20131220","20140205"
+		String[] dates={"20131212","20131213","20131220","20140205","20140206","20140210"};//,};//"20131212","20131213","20131220","20140205"
 		String[] countries={"US"};//US, France
 		String[] engines={"HTTM"};//"HTTM", "HALO"
 		
@@ -122,7 +123,9 @@ public class CorrelationAnalysis {
 							
 							String condition=engine+"-"+flowType+"-"+isHyw;	
 							String id=date+"-"+epochIdx+"-"+tmc;//+"-"+condition;
-							EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition);
+							Double groudTruthSpeed=Double.parseDouble(fields[27]);
+							EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition, groudTruthSpeed);
+							
 							
 							if(epochTMCs.containsKey(id)){
 								if(!epochTMCs.get(id).condition.equals(condition)){
@@ -286,10 +289,7 @@ public class CorrelationAnalysis {
 		}
 	}
 	
-	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
-		HashMap<String,ArrayList<EpochTMC>> epochTMCs=new HashMap<String,ArrayList<EpochTMC>>();
-		epochTMCs.put("Free", new ArrayList<EpochTMC>());
-		epochTMCs.put("Congestion", new ArrayList<EpochTMC>());
+	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(HashMap<String, ArrayList<EpochTMC>> epochTMCs, String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
 		
 		//read stat file and analyze
 		try{
@@ -311,10 +311,44 @@ public class CorrelationAnalysis {
 					}
 					epochTMC.noOfProbes=Integer.parseInt(fields[4]);
 					epochTMC.noOfProbesPerMile=Double.parseDouble(fields[5]);
+					
+					epochTMC.groundTruthSpeed=Double.parseDouble(fields[fields.length-2]);
 					epochTMC.error=Double.parseDouble(fields[fields.length-1]);
-				
-					if(epochTMC.condition.contains("Free")) epochTMCs.get("Free").add(epochTMC);
-					else epochTMCs.get("Congestion").add(epochTMC);
+					
+					if(epochTMCs.size()==2){//either free or congestion
+						if(epochTMC.condition.contains("Free")){
+							epochTMCs.get("Free").add(epochTMC);
+						}
+						else{
+							epochTMCs.get("Congestion").add(epochTMC);
+						}
+					}else{//grouped based on ground truth speed
+						double groudTruthSpd=epochTMC.groundTruthSpeed;
+						
+						//get the speed intervals
+						double[] spdBoundaries=new double[epochTMCs.size()];
+						int i=0;
+						for(String spd: epochTMCs.keySet()){
+							spdBoundaries[i++]=Double.parseDouble(spd);
+						}
+						Arrays.sort(spdBoundaries);
+						//System.out.println(epochTMCs.keySet());
+						//System.out.println(Arrays.toString(spdBoundaries));
+						
+						//find the speed interval to which the epochTMCPair belongs
+						//find the largest speed that smaller than the groundtruth speed
+						int l=-1, r=spdBoundaries.length;
+						while(l+1!=r){
+							int m=l+(r-l)/2;
+							if(groudTruthSpd<spdBoundaries[m]) r=m;
+							else l=m;
+						}
+						if(l>0&&spdBoundaries[l]==groudTruthSpd) l-=1;
+						
+						//System.out.println("spd:"+groudTruthSpd+" group:"+l);
+						//add the pair to the corresponding group
+						epochTMCs.get(String.valueOf(l*10)).add(epochTMC);
+					}
 				}
 			}else{//stat file directly extracted from ground truth table
 				sc=new Scanner(new File(Constants.V4_RES_DATA+"gt_table_"+date+"_"+country+"_Congestion.csv"));
@@ -334,7 +368,11 @@ public class CorrelationAnalysis {
 				}
 			}
 			
-			System.out.println(date+" "+country+" line cnt:"+lineCnt+" free: "+epochTMCs.get("Free").size()+" congestion: "+epochTMCs.get("Congestion").size() );
+			System.out.println(date+" "+country+" line cnt:"+lineCnt);
+			for(String trafCond: epochTMCs.keySet()){
+				System.out.println("Traffic : "+trafCond+" , #OfPairs:"+ epochTMCs.get(trafCond).size());
+			}
+			
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
@@ -342,16 +380,27 @@ public class CorrelationAnalysis {
 	}
 	
 	public void v4Attempt(){
-		//v4OutputStatResults();
-		boolean[] isCongestions={false, true};
+		/**
+		 * Set parameters
+		 */
+		boolean plotDistributionForBins=false;//true, false;
+		boolean trafficConditionDichotomy=false;//true, false
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
-		boolean plotDistributionForBins=false;	
 		String resCSVResultsVersion="v5";//"v4","v5"
+		int minNOPairsInOneBucket=200; //25, 100
+	
 		
+		//put pairs into differnt groups based on traffic conditions
 		HashMap<String, ArrayList<EpochTMC>> allPairs=new HashMap<String, ArrayList<EpochTMC>>();
-		allPairs.put("Free", new ArrayList<EpochTMC>());
-		allPairs.put("Congestion", new ArrayList<EpochTMC>());
+		if(trafficConditionDichotomy){
+			allPairs.put("Free", new ArrayList<EpochTMC>());
+			allPairs.put("Congestion", new ArrayList<EpochTMC>());
+		}else{
+			for(int i=0;i<=8;i++){
+				allPairs.put(String.valueOf(i*10), new ArrayList<EpochTMC>());//i*10 is speed range
+			}
+		}
 		
 		//print out Title of the stats
 		String title="\t All Markets in "+country+": HTTM-";
@@ -359,38 +408,44 @@ public class CorrelationAnalysis {
 		for(String date: dates){
 			title+=date+" ";
 			boolean directedExtractedFromGroundtruthTable=false;
-			HashMap<String, ArrayList<EpochTMC>> pairs=v4ReadStatResult(resCSVResultsVersion, date,country, "HTTM", directedExtractedFromGroundtruthTable);
-			allPairs.get("Free").addAll(pairs.get("Free"));
-			allPairs.get("Congestion").addAll(pairs.get("Congestion"));
+			v4ReadStatResult(allPairs, resCSVResultsVersion, date,country, "HTTM", directedExtractedFromGroundtruthTable);
 		}	
+		ArrayList<String> trafficConditions=new ArrayList<String>(allPairs.keySet());
+		Collections.sort(trafficConditions, new Comparator<String>(){
+			@Override
+			public int compare(String s1, String s2) {
+				int lenDiff=s1.length()-s2.length();
+				if(lenDiff==0){
+					return s1.compareTo(s2);
+				}
+				return lenDiff;
+			}
+		});
 		
-		for(boolean isCongestion: isCongestions){
-				
-			//TODO parameters		
-			int INI_SIZE=1000;
-			int MIN_NO_SAMPLES_IN_A_BIN=100;
-			double[] lowerBoundOfBin=new double[INI_SIZE];//of probes;
+		/**
+		 * variable for 3D Scatter
+		 */
+		ArrayList<ArrayList<Double>> xSeries=new ArrayList<ArrayList<Double>>();
+		ArrayList<ArrayList<Double>> ySeries=new ArrayList<ArrayList<Double>>();
+		ArrayList<ArrayList<Double>> zSeries=new ArrayList<ArrayList<Double>>();
+		
+		for(String trafCond:trafficConditions){
+			System.out.println(title+ " "+trafCond);
 			
+	
+			ArrayList<EpochTMC> epochTMCs=allPairs.get(trafCond);
+			
+			if(epochTMCs.size()==0) continue;
+			
+			ArrayList<DensityBucket> buckets=new ArrayList<DensityBucket>();
+			buckets.add(new DensityBucket());//first bucket
+			
+			//initialize hardcoded bins
 			int noOfBins=1000;int binStep=1;
 			double[] hardCodedBins=new double[noOfBins];
 			for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
 			//System.out.println(Arrays.toString(hardCodedBins));
-					
-			double[] avgProbeCnt=new double[INI_SIZE];
-			double[] avgProbeCntPerMile=new double[INI_SIZE];
-			HashMap<Integer, ArrayList<Double>> valuesWithinBin=new HashMap<Integer,ArrayList<Double>>();
-			for(int i=0;i<INI_SIZE;i++) valuesWithinBin.put(i, new ArrayList<Double>());
 			
-			double[] avgQualityScore=new double[INI_SIZE];
-			double[] avgErrors=new double[INI_SIZE];
-			int[] pairCnt=new int[INI_SIZE];
-			int[] cntOfErrorAboveTreshold=new int[INI_SIZE];
-			int binIdx=1;
-			
-			ArrayList<EpochTMC> epochTMCs;
-			if(!isCongestion) epochTMCs=allPairs.get("Free");
-			else epochTMCs=allPairs.get("Congestion");
-							
 			for(EpochTMC epochTMC:epochTMCs){
 				//TODO define the field to be ranked
 				//epochTMC.setToBeSortedField(epochTMC.noOfProbes);
@@ -417,11 +472,20 @@ public class CorrelationAnalysis {
 			int nextHardCodedBinIdx=0;
 			double lastValue=-1;
 			int cnt=0;
+			int binIdx=1;
+			DensityBucket lastBucket=buckets.get(buckets.size()-1);
 			for(EpochTMC epochTMC: epochTMCs){					
-				if(binIdx<lowerBoundOfBin.length&&pairCnt[binIdx-1]>=MIN_NO_SAMPLES_IN_A_BIN
+				if(lastBucket.pairCnt>=minNOPairsInOneBucket
 		&&nextHardCodedBinIdx<hardCodedBins.length&&epochTMC.fieldToBeSorted>hardCodedBins[nextHardCodedBinIdx]
 				&&epochTMC.fieldToBeSorted>lastValue){
-					lowerBoundOfBin[binIdx]=epochTMC.fieldToBeSorted;
+					
+					DensityBucket dBucket=new DensityBucket();
+					dBucket.lowerBound=epochTMC.fieldToBeSorted;
+					if(binIdx>1){//not first bucket, update the upper bound of previous bucket 
+						buckets.get(buckets.size()-1).upperBound=dBucket.lowerBound;
+					}
+					
+					buckets.add(dBucket);
 					binIdx++;
 					nextHardCodedBinIdx++;
 				}
@@ -429,21 +493,20 @@ public class CorrelationAnalysis {
 						
 				cnt++;
 				
-				pairCnt[binIdx-1]+=1;
-				avgErrors[binIdx-1]+=Math.abs(epochTMC.error);
-				avgProbeCnt[binIdx-1]+=epochTMC.noOfProbes;
-				avgProbeCntPerMile[binIdx-1]+=epochTMC.noOfProbesPerMile;
-				valuesWithinBin.get(binIdx-1).add(epochTMC.error);//add error into the bin
-				if(Math.abs(epochTMC.error)>10) cntOfErrorAboveTreshold[binIdx-1]++;
-				
+				lastBucket=buckets.get(buckets.size()-1);
+				lastBucket.pairs.add(epochTMC);
+				lastBucket.pairCnt+=1;
+				if(Math.abs(epochTMC.error)>10) lastBucket.cntOfPairFallOutBand+=1;
+				lastBucket.avgError+=Math.abs(epochTMC.error);
+				lastBucket.avgProbeCnt+=epochTMC.noOfProbes;
+				lastBucket.avgProbeCntPerMile+=epochTMC.noOfProbesPerMile;
+						
 				/*if(!isCongestion&&avgProbeCnt[b]>30){
 					System.out.println("density :" + avgProbeCnt[i]);
 					System.out.println(valuesWithinBin.get(i));
 				}*/
 			}			
-			
-			if(isCongestion) System.out.println(title+ " Congestion");
-			else System.out.println(title+ " Free Flow");
+
 			
 			//System.out.println("densityIdx="+binIdx);
 			Variance variance=new Variance();
@@ -452,73 +515,95 @@ public class CorrelationAnalysis {
 			
 			double sum=0;
 			for(int i=0;i<binIdx;i++){
-				avgErrors[i]/=pairCnt[i];
-				avgProbeCnt[i]/=pairCnt[i];
-				avgProbeCntPerMile[i]/=pairCnt[i];
-				avgQualityScore[i]=((int)((1-(cntOfErrorAboveTreshold[i]+0.0)/pairCnt[i])*10000))/100.0;
-				
-				//covert the errors in one bin into an array
-				ArrayList<Double> values=valuesWithinBin.get(i);
-				double[] vs=new double[values.size()];
-				for(int j=0;j<vs.length;j++){
-					vs[j]=values.get(j);
-				}
+				DensityBucket dBucket=buckets.get(i);
+				dBucket.avgError/=dBucket.pairCnt;
+				dBucket.avgProbeCnt/=dBucket.pairCnt;
+				dBucket.avgProbeCntPerMile/=dBucket.pairCnt;
+				dBucket.avgQualityScore=(1-dBucket.cntOfPairFallOutBand/dBucket.pairCnt)*100;
+							
+				double[] errors=dBucket.getPairErrorArray();
+				double[] groundTruthSpeed=dBucket.getPairGroundTruthSpeedArray();
+				//get the average groundtruth speed
+				dBucket.avgGroundTruthSpeed=mean.evaluate(groundTruthSpeed);
 				
 				//plot
 				//if(isCongestion)
 				if(plotDistributionForBins){
 					if(i<3||binIdx-i<=3){//plot the distribution
-						String cond;
-						if(isCongestion) cond="Congestion";
-						else cond="Free";
-						
-						String figTitle=cond+"_"+i+" th bin: "+lowerBoundOfBin[binIdx];
+						String cond=trafCond;
+						String figTitle=cond+"_"+i+" th bin: "+dBucket.lowerBound;
 						if(i>0){
-							figTitle+=" ~ ";
-							if(i<binIdx-1) figTitle+=lowerBoundOfBin[binIdx+1];
+							figTitle+=" ~ "+dBucket.upperBound;
 						}
-						//Plot.histogram(figTitle, vs, 20, Constants.V4_RES_DATA+"figs/"+cond+"_"+i+".jpg");
-						
+						//plot the histogram of errors
+						//Plot.histogram(figTitle, errors, 20, Constants.V5_RES_DATA+"figs/errors/"+cond+"_"+i+".jpg");
+						Plot.histogram(figTitle, groundTruthSpeed, 8, Constants.V5_RES_DATA+"figs/gt_speed/"+cond+"_"+i+".jpg");
 					}
 				}
 				
-				
-				for(int j=0;j<vs.length;j++){
-					vs[j]=Math.abs(vs[j] );
+				for(int j=0;j<errors.length;j++){
+					errors[j]=Math.abs(errors[j] );
 				}
-				double avg=mean.evaluate(vs);
-				double std=Math.sqrt(variance.evaluate(vs, avg) );
+				double avg=mean.evaluate(errors);
+				double std=Math.sqrt(variance.evaluate(errors, avg) );
 				stds[i]=std;
 				
-				sum+=pairCnt[i];
-				//System.out.println(avgProbeCnt[i]+" "+avgProbeCntPerMile[i]+" "+avgErrors[i]+""+avg+" "+std);
+				sum+=dBucket.pairCnt;
 			}
 			
 			System.out.println("cnt="+cnt+" sum="+sum);
-			
 			System.out.println("densityRange,#ofEpochTMCPairs,avgDensity,avgError,avgQS");
 			for(int i=0;i<binIdx;i++){
-				if(i>0) System.out.print("["+String.format("%.1f", lowerBoundOfBin[i])+"~");
+				DensityBucket dBucket=buckets.get(i);
+				if(i>0) System.out.print("["+dBucket.lowerBound+"~");
 				else System.out.print("[ 0.0~");
-				if(i<binIdx-1) System.out.print(String.format("%.1f",lowerBoundOfBin[i+1])+"),");
+				if(i<binIdx-1) System.out.print(dBucket.upperBound+"),");
 				else System.out.print("     ],");
-				System.out.print(pairCnt[i]+",");
+				System.out.print(dBucket.pairCnt+",");
 				System.out.println(
 						//String.format("%.2f", avgProbeCnt[i])
 						//+","+
-						String.format("%.2f", avgProbeCntPerMile[i])
-						+","+String.format("%.2f", avgErrors[i])
-						+","+avgQualityScore[i]+"%"
-						//+","+String.format("%.2f", stds[i])+"%"
-						
+						String.format("%.2f", dBucket.avgProbeCntPerMile)
+						+","+String.format("%.2f", dBucket.avgError)
+						+","+String.format("%.2f",dBucket.avgQualityScore)+"%"
+						+","+String.format("%.2f", dBucket.avgGroundTruthSpeed)
 				);
 			}
 			
-			//cut off empty bins
-			avgProbeCnt=Arrays.copyOf(avgProbeCnt, binIdx);
-			avgProbeCntPerMile=Arrays.copyOf(avgProbeCntPerMile, binIdx);
-			avgErrors=Arrays.copyOf(avgErrors, binIdx);
-			avgQualityScore=Arrays.copyOf(avgQualityScore, binIdx);
+			
+			/**
+			 * Calculate Pearson correlation
+			 */
+			double[] avgProbeCnt=new double[buckets.size()];
+			double[] avgProbeCntPerMile=new double[buckets.size()];
+			double[] avgErrors=new double[buckets.size()];
+			double[] avgQualityScore=new double[buckets.size()];
+			
+			if(buckets.size()>0){
+				xSeries.add(new ArrayList<Double>());
+				ySeries.add(new ArrayList<Double>());
+				zSeries.add(new ArrayList<Double>());
+			}
+			
+			for(int i=0;i<buckets.size();i++){
+				DensityBucket dBucket=buckets.get(i);
+				avgProbeCnt[i]=dBucket.avgProbeCnt;
+				avgProbeCntPerMile[i]=dBucket.avgProbeCntPerMile;
+				avgErrors[i]=dBucket.avgError;
+				avgQualityScore[i]=dBucket.avgQualityScore;
+				
+				if(buckets.size()>0){
+					if(trafficConditionDichotomy){
+						if(trafCond.toLowerCase().contains("free")) xSeries.get(xSeries.size()-1).add(2.0);
+						else xSeries.get(xSeries.size()-1).add(1.0);
+					}else{
+						xSeries.get(xSeries.size()-1).add(Double.parseDouble(trafCond));
+					}
+					ySeries.get(ySeries.size()-1).add(avgProbeCntPerMile[i]);
+					//zSeries.get(zSeries.size()-1).add(avgQualityScore[i]);
+					zSeries.get(zSeries.size()-1).add(avgErrors[i]);
+				}				
+			}
 			
 			
 			PearsonsCorrelation pc=new PearsonsCorrelation();
@@ -527,9 +612,13 @@ public class CorrelationAnalysis {
 			System.out.println("correlation between avgProbeCntPerMile and avgError is "+String.format("%.2f", pc.correlation(avgProbeCntPerMile, avgErrors)));
 			System.out.println("correlation between avgProbeCntPerMile and avgQualityScore is "+String.format("%.2f", pc.correlation(avgProbeCntPerMile, avgQualityScore)));
 			System.out.println();
-			
-			
+				
 		}
+		
+		/**
+		 * Plot the 3D scatter
+		 */	
+		Plot.scatter3D("Traffic Condition", xSeries, ySeries, zSeries);
 		
 	}
 	
@@ -558,7 +647,8 @@ public class CorrelationAnalysis {
 					String isHyw=fields[12];
 					String flowType=fields[36];
 					
-					EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, covered, error, engine+"-"+flowType+"-"+isHyw);
+					Double groundTruthSpeed=Double.parseDouble(fields[27]);
+					EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, covered, error, engine+"-"+flowType+"-"+isHyw, groundTruthSpeed);
 					if(!epochTMCPairsIndexedByEpoch.containsKey(epochIdx)) epochTMCPairsIndexedByEpoch.put(epochIdx, new ArrayList<EpochTMC>());
 					epochTMCPairsIndexedByEpoch.get(epochIdx).add(epochTMC);
 				}

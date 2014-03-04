@@ -106,6 +106,7 @@ class EpochTMC {
 	
 	public double fieldToBeSorted;
 	
+	public double groundTruthSpeed;
 	public double error;//diff between the GT and the predicated speed	
 	public String condition;
 	
@@ -117,14 +118,15 @@ class EpochTMC {
 		providerSet=new HashSet<String>();		
 	}
 	
-	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition){
+	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition, double groundTruthSpeed){
 		this(date, tmc, epochIdx);
 		this.error=error;
 		this.condition=condition;
+		this.groundTruthSpeed=groundTruthSpeed;
 	}
 	
-	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition){
-		this(date, tmc, epochIdx,error,condition);
+	public EpochTMC(String date, String tmc, int epochIdx, boolean covered, double error, String condition, double groundTruthSpeed){
+		this(date, tmc, epochIdx,error,condition, groundTruthSpeed);
 		this.covered=covered;
 	}
 	
@@ -141,7 +143,8 @@ class EpochTMC {
 	public String toString(){
 		return date+","+epochIdx+","+tmc+","+condition
 				+","+(int)noOfProbes+","+String.format("%.2f", noOfProbesPerMile)
-				+","+vehicleSet.size()+","+providerSet.size()+","+error;
+				+","+vehicleSet.size()+","+providerSet.size()
+				+","+String.format("%.2f", groundTruthSpeed)+","+error;
 	}
 	
 	

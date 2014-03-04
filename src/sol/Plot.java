@@ -34,20 +34,24 @@ public class Plot {
 			}			
 		}*/
 		
-	scatter3D("3D", new double[]{1,1,1,2,2,2,3,3,3}, new double[]{20,40,60,20,40,60,20,40,60}, new double[]{0.1,0.2,0.3,
-		0.4,0.5,0.6,0.7,0.8,0.9},3, new String[]{"0-20","20-40","40-60"});
+	/*scatter3D("3D", new double[]{1,1,1,2,2,2,3,3,3}, new double[]{20,40,60,20,40,60,20,40,60}, new double[]{0.1,0.2,0.3,
+		0.4,0.5,0.6,0.7,0.8,0.9},3, new String[]{"0-20","20-40","40-60"});*/
 	}
 
-	public static void scatter3D(String title, double[] x, double[] y, double [] z, int noOfBinsOnX, String[] spdRange){
+	public static void scatter3D(String title, ArrayList<ArrayList<Double>> xSeries, ArrayList<ArrayList<Double>> ySeries, ArrayList<ArrayList<Double>> zSeries){
 		// create your PlotPanel (you can use it as a JPanel) with a legend at SOUTH
 		Plot3DPanel plot = new Plot3DPanel("SOUTH");
  
 		// add scatter plot plot to the PlotPanel
-		int sIdx=0, bin=0;
-		while(sIdx<z.length){
-			plot.addLinePlot("Spd: "+spdRange[bin],subarray(x, sIdx, noOfBinsOnX), subarray(y, sIdx, noOfBinsOnX),subarray(z, sIdx, noOfBinsOnX));
-			sIdx+=noOfBinsOnX;
+		for(int i=0;i<xSeries.size();i++){
+			//plot.addLinePlot("Spd: "+spdRange[bin],subarray(x, sIdx, noOfBinsOnX), subarray(y, sIdx, noOfBinsOnX),subarray(z, sIdx, noOfBinsOnX));
+			
+			double[] x=CommonUtils.doubleListToDoubleArray(xSeries.get(i));
+			double[] y=CommonUtils.doubleListToDoubleArray(ySeries.get(i));
+			double[] z=CommonUtils.doubleListToDoubleArray(zSeries.get(i));
+			plot.addLinePlot("Spd: "+x[0], x, y,z);
 		}
+		
 		// put the PlotPanel in a JFrame like a JPanel
 		JFrame frame = new JFrame("a plot panel");
 		frame.setSize(600, 600);
@@ -95,3 +99,5 @@ public class Plot {
 
 	}
 }
+
+
