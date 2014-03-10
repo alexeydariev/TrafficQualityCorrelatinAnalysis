@@ -1,23 +1,20 @@
-package sol;
+package com.here.traffic.quality.correlation;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLClientInfoException;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -25,15 +22,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
 
-import javax.swing.text.AbstractDocument.LeafElement;
-
-import org.apache.commons.math3.analysis.function.Exp;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
-import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
-import com.sun.xml.internal.ws.policy.EffectivePolicyModifier;
+import com.here.traffic.quality.correlation.ds.MarketV3;
+import com.here.traffic.quality.correlation.ds.TMC;
+import com.here.traffic.quality.correlation.ds.v2.ConditionV2;
+import com.here.traffic.quality.correlation.ds.v2.MarketV2;
+import com.here.traffic.quality.correlation.ds.v2.XAxisMetric;
+import com.here.traffic.quality.correlation.ds.v2.YAxisMetric;
+import com.here.traffic.quality.correlation.ds.v3.XYMetrics;
+import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
+import com.here.traffic.quality.correlation.ds.v5.DensityBucket;
 
 
 public class CorrelationAnalysis {
@@ -383,7 +384,7 @@ public class CorrelationAnalysis {
 		/**
 		 * Set parameters
 		 */
-		boolean plotDistributionForBins=false;//true, false;
+		boolean plotting=true;//true, false;
 		boolean trafficConditionDichotomy=false;//true, false
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
@@ -528,7 +529,7 @@ public class CorrelationAnalysis {
 				
 				//plot
 				//if(isCongestion)
-				if(plotDistributionForBins){
+				if(plotting){
 					if(i<3||binIdx-i<=3){//plot the distribution
 						String cond=trafCond;
 						String figTitle=cond+"_"+i+" th bin: "+dBucket.lowerBound;
@@ -537,7 +538,7 @@ public class CorrelationAnalysis {
 						}
 						//plot the histogram of errors
 						//Plot.histogram(figTitle, errors, 20, Constants.V5_RES_DATA+"figs/errors/"+cond+"_"+i+".jpg");
-						Plot.histogram(figTitle, groundTruthSpeed, 8, Constants.V5_RES_DATA+"figs/gt_speed/"+cond+"_"+i+".jpg");
+						//Plot.histogram(figTitle, groundTruthSpeed, 8, Constants.V5_RES_DATA+"figs/gt_speed/"+cond+"_"+i+".jpg");
 					}
 				}
 				
@@ -600,8 +601,9 @@ public class CorrelationAnalysis {
 						xSeries.get(xSeries.size()-1).add(Double.parseDouble(trafCond));
 					}
 					ySeries.get(ySeries.size()-1).add(avgProbeCntPerMile[i]);
-					//zSeries.get(zSeries.size()-1).add(avgQualityScore[i]);
-					zSeries.get(zSeries.size()-1).add(avgErrors[i]);
+					
+					zSeries.get(zSeries.size()-1).add(avgQualityScore[i]); //quality score
+					//zSeries.get(zSeries.size()-1).add(avgErrors[i]); //avg error
 				}				
 			}
 			
@@ -618,8 +620,9 @@ public class CorrelationAnalysis {
 		/**
 		 * Plot the 3D scatter
 		 */	
-		Plot.scatter3D("Traffic Condition", xSeries, ySeries, zSeries);
-		
+		if(plotting){
+			Plot.scatter3D("Traffic Condition", xSeries, ySeries, zSeries);
+		}
 	}
 	
 	public void v3Attempt(){
@@ -768,7 +771,7 @@ public class CorrelationAnalysis {
 				fw.write(MarketV2.getHeader()+"\n");
 				for(String name: markets.keySet()){
 					MarketV2 market=markets.get(name);
-					XAXisMetric metric=market.densityMetrics;
+					XAxisMetric metric=market.densityMetrics;
 					metric.avgProbeCntPerTMC=metric.sumOfProbes/market.tmcs.size();
 					metric.avgVehicleCntPerTMC=metric.sumOfVehicles/market.tmcs.size();
 					fw.write(market+"\n");
@@ -798,7 +801,7 @@ public class CorrelationAnalysis {
 					
 					if(markets.containsKey(tmcToMarket.get(tmc))){
 						MarketV2 market=markets.get(tmcToMarket.get(tmc));
-						XAXisMetric metric=market.densityMetrics;
+						XAxisMetric metric=market.densityMetrics;
 						int probeCnt=Integer.parseInt(fields[1]);
 						metric.sumOfProbes+=probeCnt;
 						if(probeCnt>Constants.PROBE_CNT_THRSHOLD) metric.noOfTMCsWithProbeCntOverThreshold+=1;
@@ -835,13 +838,13 @@ public class CorrelationAnalysis {
 				}
 				
 				String engine=fields[Constants.IDX_ENGINE_TYPE].trim(), timePeriod=fields[Constants.IDX_TIME_PERIOD];
-				ConditonV2 condition=new ConditonV2(engine, timePeriod, "ALL");
+				ConditionV2 condition=new ConditionV2(engine, timePeriod, "ALL");
 				market.qualityMetrics.put(condition.toString(), new YAxisMetric(Double.parseDouble(fields[Constants.IDX_ROAD_CONDITION_ALL])));
-				ConditonV2.allConditonV2s.add(condition.toString());
+				ConditionV2.allConditonV2s.add(condition.toString());
 				
-				condition=new ConditonV2(engine, timePeriod, "Congestion");
+				condition=new ConditionV2(engine, timePeriod, "Congestion");
 				market.qualityMetrics.put(condition.toString(), new YAxisMetric(Double.parseDouble(fields[Constants.IDX_ROAD_CONDITION_CONGESTION])));
-				ConditonV2.allConditonV2s.add(condition.toString());
+				ConditionV2.allConditonV2s.add(condition.toString());
 			}
 			System.out.println("# of markets="+markets.size());
 			sc.close();

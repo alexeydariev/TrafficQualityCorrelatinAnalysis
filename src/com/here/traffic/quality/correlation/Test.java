@@ -1,4 +1,4 @@
-package sol;
+package com.here.traffic.quality.correlation;
 
 import java.text.DateFormat;
 import java.text.ParseException;

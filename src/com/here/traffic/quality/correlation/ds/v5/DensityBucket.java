@@ -1,19 +1,21 @@
-package sol;
+package com.here.traffic.quality.correlation.ds.v5;
 
 import java.util.ArrayList;
 
+import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
+
 public class DensityBucket {
-  double lowerBound;
-  double upperBound;
+  public double lowerBound;
+  public double upperBound;
 	
-  double avgProbeCnt;
-  double avgGroundTruthSpeed;
-  double avgProbeCntPerMile;
-  double avgError;
-  double avgQualityScore;
-  double pairCnt;
-  double cntOfPairFallOutBand;
-  ArrayList<EpochTMC> pairs;
+  public double avgProbeCnt;
+  public double avgGroundTruthSpeed;
+  public double avgProbeCntPerMile;
+  public double avgError;
+  public double avgQualityScore;
+  public double pairCnt;
+  public double cntOfPairFallOutBand;
+  public ArrayList<EpochTMC> pairs;
   
   public DensityBucket(){
 	  pairs=new ArrayList<EpochTMC>();

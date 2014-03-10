@@ -1,22 +1,13 @@
-package sol;
+package com.here.traffic.quality.correlation;
 
-import java.awt.FlowLayout;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
-import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 
 import org.apache.commons.math3.stat.descriptive.rank.Max;
 import org.math.plot.Plot2DPanel;
 import org.math.plot.Plot3DPanel;
-
-import com.sun.org.apache.xpath.internal.axes.AxesWalker;
 
 public class Plot {
 
@@ -42,6 +33,8 @@ public class Plot {
 		// create your PlotPanel (you can use it as a JPanel) with a legend at SOUTH
 		Plot3DPanel plot = new Plot3DPanel("SOUTH");
  
+		plot.setAxisLabels("speed", "density", "QS");
+		
 		// add scatter plot plot to the PlotPanel
 		for(int i=0;i<xSeries.size();i++){
 			//plot.addLinePlot("Spd: "+spdRange[bin],subarray(x, sIdx, noOfBinsOnX), subarray(y, sIdx, noOfBinsOnX),subarray(z, sIdx, noOfBinsOnX));
@@ -49,7 +42,14 @@ public class Plot {
 			double[] x=CommonUtils.doubleListToDoubleArray(xSeries.get(i));
 			double[] y=CommonUtils.doubleListToDoubleArray(ySeries.get(i));
 			double[] z=CommonUtils.doubleListToDoubleArray(zSeries.get(i));
-			plot.addLinePlot("Spd: "+x[0], x, y,z);
+			
+			String spdLegend="Spd: "+x[0];
+			if(i>0){
+				spdLegend+=" ~ ";
+				if(i<xSeries.size()-1) spdLegend+=xSeries.get(i+1).get(0);
+			}
+			
+			plot.addLinePlot(spdLegend, x, y,z);
 		}
 		
 		// put the PlotPanel in a JFrame like a JPanel

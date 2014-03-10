@@ -1,52 +1,8 @@
-package sol;
+package com.here.traffic.quality.correlation.ds.v2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-
-
-
-
-class XAXisMetric{
-	public double avgProbeCntPerTMC;
-	public double avgVehicleCntPerTMC;
-	public double avgProviderCntPerTMC;
-	
-	public double sumOfProbes;
-	public double sumOfVehicles;
-	public double sumOfProviders;
-	
-	public double noOfTMCsWithProbeCntOverThreshold;
-	public double noOfTMCsWithVehicleCntOverThreshold;
-}
-
-
-class YAxisMetric{
-	public double qualityScore; //just for one day
-	
-	public YAxisMetric(double qs){
-		qualityScore=qs;
-	}
-}
-
-class ConditonV2{
-	
-	public String timePeriod;
-	public String engine;
-	public String roadCondition;
-	
-	public static HashSet<String> allConditonV2s=new HashSet<String>();
-	
-	public ConditonV2(String engine, String timePeriod, String roadCondition){
-		this.engine=engine;
-		this.timePeriod=timePeriod;
-		this.roadCondition=roadCondition;
-	}
-	public String toString(){
-		return engine+"-"+timePeriod+"-"+roadCondition;
-	}
-
-}
 
 
 public class MarketV2 {
@@ -58,7 +14,7 @@ public class MarketV2 {
 	
 	
 	//public Conditon conditon;
-	public XAXisMetric densityMetrics;
+	public XAxisMetric densityMetrics;
 	public HashMap<String, YAxisMetric> qualityMetrics;
 	
 	public MarketV2(String market, String date){
@@ -66,13 +22,13 @@ public class MarketV2 {
 		this.date=date;
 		tmcs=new HashSet<String>();
 		qualityMetrics=new HashMap<String, YAxisMetric>();
-		densityMetrics=new XAXisMetric();
+		densityMetrics=new XAxisMetric();
 	}
 	
 	public MarketV2(String[] fields){
 		name=fields[0];
 		date=fields[1];
-		densityMetrics=new XAXisMetric();
+		densityMetrics=new XAxisMetric();
 			densityMetrics.avgProbeCntPerTMC=Double.parseDouble(fields[2]);
 			densityMetrics.avgVehicleCntPerTMC=Double.parseDouble(fields[3]);
 			densityMetrics.noOfTMCsWithProbeCntOverThreshold=Double.parseDouble(fields[4]);
@@ -81,7 +37,7 @@ public class MarketV2 {
 		int idx=6;
 		while(idx<fields.length-4){
 			qualityMetrics.put(fields[idx], new YAxisMetric(Double.parseDouble(fields[idx+1])));
-			ConditonV2.allConditonV2s.add(fields[idx]);
+			ConditionV2.allConditonV2s.add(fields[idx]);
 			idx+=2;
 		}
 		tmcs=new HashSet<String>();
@@ -93,7 +49,7 @@ public class MarketV2 {
 	public static String getHeader(){
 		String header="market,date,avgProbeCntPerTMC,avgVehicleCntPerTMC" 
 				+",noOfTMCsWithProbeCntOverThrshold,noOfTMCsWithVehicleCntOverThreshold";
-		for(String cond: ConditonV2.allConditonV2s){
+		for(String cond: ConditionV2.allConditonV2s){
 			header+=",Condition,qualityScore";
 		}
 		header+=",noOfTMCs,totalCntOfProbes,totalCntOfVehicles,totalMiles";
@@ -107,7 +63,7 @@ public class MarketV2 {
 				+","+densityMetrics.noOfTMCsWithProbeCntOverThreshold
 				+","+densityMetrics.noOfTMCsWithVehicleCntOverThreshold;
 		
-		for(String cond:ConditonV2.allConditonV2s){
+		for(String cond:ConditionV2.allConditonV2s){
 			YAxisMetric yMetric=qualityMetrics.get(cond);
 			marketString+=","+cond;
 			if(yMetric!=null) marketString+=","+String.format("%.3f", yMetric.qualityScore);

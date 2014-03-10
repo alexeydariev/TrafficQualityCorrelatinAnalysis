@@ -1,4 +1,4 @@
-package sol;
+package com.here.traffic.quality.correlation.ds;
 
 public class TMC {
 	public String tmc;

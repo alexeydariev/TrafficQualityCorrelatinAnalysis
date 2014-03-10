@@ -4,6 +4,8 @@ import java.io.*;
 
 import com.here.traffic.quality.LogWriter;
 import com.here.traffic.quality.SqlQuery;
+import com.here.traffic.quality.correlation.Constants;
+import com.here.traffic.quality.correlation.CorrelationAnalysis;
 import com.javacodegeeks.java.core.CompressFileGzip;
 
 import java.io.File;
@@ -16,9 +18,6 @@ import java.util.HashSet;
 import java.util.Properties;
 
 import javax.xml.bind.JAXBContext;
-
-import sol.Constants;
-import sol.CorrelationAnalysis;
 
 import java.util.zip.GZIPOutputStream;
 
