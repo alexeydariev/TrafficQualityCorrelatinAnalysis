@@ -12,6 +12,8 @@ public class DensityBucket {
   public double avgGroundTruthSpeed;
   public double avgProbeCntPerMile;
   public double avgError;
+  public double stdError;
+  
   public double avgQualityScore;
   public double pairCnt;
   public double cntOfPairFallOutBand;

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import javax.swing.JFrame;
 
 import org.apache.commons.math3.stat.descriptive.rank.Max;
+import org.apache.commons.math3.stat.descriptive.rank.Min;
 import org.math.plot.Plot2DPanel;
 import org.math.plot.Plot3DPanel;
 
@@ -43,12 +44,13 @@ public class Plot {
 			double[] y=CommonUtils.doubleListToDoubleArray(ySeries.get(i));
 			double[] z=CommonUtils.doubleListToDoubleArray(zSeries.get(i));
 			
-			String spdLegend="Spd: "+x[0];
-			if(i>0){
-				spdLegend+=" ~ ";
-				if(i<xSeries.size()-1) spdLegend+=xSeries.get(i+1).get(0);
-			}
+			Max max=new Max();
+			Min min=new Min();
 			
+			String spdLegend="Spd: "+String.format("%.1f", min.evaluate(x) );
+			spdLegend+=" ~ ";
+			spdLegend+=String.format("%.1f", max.evaluate(x));
+		
 			plot.addLinePlot(spdLegend, x, y,z);
 		}
 		

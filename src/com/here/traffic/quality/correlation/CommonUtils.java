@@ -178,9 +178,16 @@ public class CommonUtils {
 	}
 	
 	public static int HMSToSeconds(String time){
-		String[] fields=time.split(":");
-		int secs=Integer.parseInt(fields[0])*3600+Integer.parseInt(fields[1])*60;
-		if (fields.length>2) secs+=Integer.parseInt(fields[2]);
+		int secs=-1;
+		try{
+			String[] fields=time.split(":");
+			secs=Integer.parseInt(fields[0])*3600+Integer.parseInt(fields[1])*60;
+			if (fields.length>2) secs+=Integer.parseInt(fields[2]);
+		}catch(Exception ex){
+			System.out.println("time="+time);
+			ex.printStackTrace();
+			System.exit(-1);
+		}
 		return secs;
 	}
 	

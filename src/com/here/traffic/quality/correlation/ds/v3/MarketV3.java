@@ -1,10 +1,8 @@
-package com.here.traffic.quality.correlation.ds;
+package com.here.traffic.quality.correlation.ds.v3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-
-import com.here.traffic.quality.correlation.ds.v3.XYMetrics;
 
 public class MarketV3 {
 	public String marketName;
