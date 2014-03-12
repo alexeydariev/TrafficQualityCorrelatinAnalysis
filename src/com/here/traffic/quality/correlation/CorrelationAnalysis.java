@@ -53,8 +53,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		v4OutputStatResults();
-		//v4Attempt();
+		//v4OutputStatResults();
+		v4Attempt();
 		
 	}
 	
@@ -77,7 +77,8 @@ public class CorrelationAnalysis {
 	
 	
 	public void v4OutputStatResults(){
-		boolean lowSpdFiltering=false, coutingWindowShifting=false;
+		boolean lowSpdFiltering=true, coutingWindowShifting=false;
+		analysisVersion="v7";	
 		String[] dates={"20131212","20131213","20131220","20140205","20140206","20140210"};//,};//"20131212","20131213","20131220","20140205"
 		String[] countries={"US"};//US, France
 		String[] engines={"HTTM"};//"HTTM", "HALO"
@@ -264,7 +265,7 @@ public class CorrelationAnalysis {
 						//if(true) return;
 						
 						//output the stats to a file
-						analysisVersion="v6_";	
+				
 						fw=new FileWriter(Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+country+".csv");
 						
 						ArrayList<EpochTMC> pairs=new ArrayList<EpochTMC>();
@@ -391,14 +392,14 @@ public class CorrelationAnalysis {
 		 * Set parameters
 		 */
 		boolean plotting=false;//true, false;
-		boolean trafficConditionDichotomy=true;//true, false
+		boolean trafficConditionDichotomy=false;//true, false
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
 		analysisVersion="v6";//"v4","v5","v6"
 		int minNOPairsInOneBucket=200; //25, 100
 	
 		
-		//put pairs into differnt groups based on traffic conditions
+		//put pairs into different groups based on traffic conditions
 		HashMap<String, ArrayList<EpochTMC>> allPairs=new HashMap<String, ArrayList<EpochTMC>>();
 		if(trafficConditionDichotomy){
 			allPairs.put("Free", new ArrayList<EpochTMC>());
@@ -437,7 +438,11 @@ public class CorrelationAnalysis {
 		ArrayList<ArrayList<Double>> zSeries=new ArrayList<ArrayList<Double>>();
 		
 		try{
-			FileWriter fw=new FileWriter(Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_final.txt");
+			String outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion;
+			if(!trafficConditionDichotomy) outputFilePath+="_speed";
+			outputFilePath+="_final.txt";
+			
+			FileWriter fw=new FileWriter(outputFilePath);
 			for(String trafCond:trafficConditions){
 				System.out.println(title+ " "+trafCond);
 				
