@@ -9,33 +9,24 @@ public class DensityBucket {
   public double upperBound;
 	
   public double avgProbeCnt;
+  public double avgProbSpdStd;
+  public double avgProbeSpdMean;
+  
   public double avgGroundTruthSpeed;
   public double avgProbeCntPerMile;
   public double avgError;
   public double stdError;
   
   public double avgQualityScore;
-  public double pairCnt;
+  public int pairCnt;
   public double cntOfPairFallOutBand;
   public ArrayList<EpochTMC> pairs;
+  
+  public double[] groundTruthSpeed;
   
   public DensityBucket(){
 	  pairs=new ArrayList<EpochTMC>();
   }
+ 
   
-  public double[] getPairGroundTruthSpeedArray(){
-	  double[] ret=new double[pairs.size()];
-	  for(int i=0;i<pairs.size();i++){
-		  ret[i]=pairs.get(i).groundTruthSpeed;
-	  }
-	  return ret;
-  }
-  
-  public double[] getPairErrorArray(){
-	  double[] ret=new double[pairs.size()];
-	  for(int i=0;i<pairs.size();i++){
-		  ret[i]=pairs.get(i).error;
-	  }
-	  return ret;
-  }
 }

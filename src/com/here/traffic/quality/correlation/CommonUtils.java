@@ -4,21 +4,31 @@ package com.here.traffic.quality.correlation;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+
+import sun.org.mozilla.javascript.internal.ast.ThrowStatement;
+
 
 public class CommonUtils {
+	public static Random rand=new Random();
+	
 	public static void main(String[] args){
+		System.out.println(randomByShuffle(12, 10) );
 		
-		System.out.println(calculatePDFOfNormalDistribution(0.06, 0.08, -0.001));
+		//System.out.println(calculatePDFOfNormalDistribution(0.06, 0.08, -0.001));
 		
-		System.out.println(new NormalDistribution(0.06, 0.08).density(-0.001));
+		//System.out.println(new NormalDistribution(0.06, 0.08).density(-0.001));
 		//System.out.println(stringTimeToSeconds("18:06:34"));
 		//System.out.println(secondsToStringTime(65181));
 		//System.out.println(getDirectory("E:/workspace/android/ActivityRecognition/logs/weka/input/features2013_08_295.arff"));
@@ -292,7 +302,7 @@ public class CommonUtils {
 	 * @param j
 	 * @return the first field that out of the 3\delta range
 	 */
-	private static int  isAbnormal(String [] fields, ArrayList<ArrayList<Double>> vars, ArrayList<ArrayList<Double>> avgs, int j){
+	public static int  isAbnormal(String [] fields, ArrayList<ArrayList<Double>> vars, ArrayList<ArrayList<Double>> avgs, int j){
 		int[] indices={2,3, 5, 6, 7 ,8};
 		for(int i=0;i<indices.length;i++){
 			if(Math.abs(Double.parseDouble(fields[indices[i]])-avgs.get(j).get(indices[i]-1))>=3*Math.sqrt(vars.get(j).get(indices[i]-1)) ){
@@ -301,6 +311,35 @@ public class CommonUtils {
 		}
 		//System.out.println(isAbnormal);
 		return -1;
+	}
+	
+	/**
+	 * 
+	 * @param n,k
+	 * @return randomly generate k different numbers ranging from 0~n-1
+	 */
+	public static HashSet<Integer> randomByShuffle(int k, int n){
+		int[] ret=new int[n];
+		
+		//initialize the array
+		for(int i=0;i<n;i++){
+			ret[i]=i;
+		}
+	
+		if(k<n){
+			for(int i=0;i<k;i++){
+				int j=rand.nextInt(n-i)+i;
+				int tmp=ret[i];
+				ret[i]=ret[j];
+				ret[j]=tmp;
+			}	
+		}
+		
+		HashSet<Integer> randomK=new HashSet<Integer>();
+		for(int idx:Arrays.copyOf(ret, k)) randomK.add(idx);
+		
+		return randomK;
+		
 	}
 	
 }

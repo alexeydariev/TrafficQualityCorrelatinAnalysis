@@ -1,5 +1,6 @@
 package com.here.traffic.quality.correlation.ds.v4;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 
 public class EpochTMC {
@@ -18,6 +19,10 @@ public class EpochTMC {
 	public int noOfProviders;
 	public double noOfProbesPerMile;
 	
+	public ArrayList<Double> probeSpeeds;//store the speed of probes corresponding to this pair
+	public double probeSpeedMean;
+	public double probeSpeedStd;
+	
 	
 	public double fieldToBeSorted;
 	
@@ -31,6 +36,7 @@ public class EpochTMC {
 		this.epochIdx=epochIdx;
 		vehicleSet=new HashSet<String>();
 		providerSet=new HashSet<String>();		
+		probeSpeeds=new ArrayList<Double>();
 	}
 	
 	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition, double groundTruthSpeed){
@@ -58,6 +64,9 @@ public class EpochTMC {
 	public String toString(){
 		return date+","+epochIdx+","+tmc+","+condition
 				+","+(int)noOfProbes+","+String.format("%.2f", noOfProbesPerMile)
+				
+				+","+String.format("%.2f", probeSpeedMean)+","+String.format("%.2f", probeSpeedStd)
+				
 				+","+vehicleSet.size()+","+providerSet.size()
 				+","+String.format("%.2f", groundTruthSpeed)+","+error;
 	}
