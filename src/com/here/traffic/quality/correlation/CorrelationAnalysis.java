@@ -79,13 +79,15 @@ public class CorrelationAnalysis {
 	
 	
 	public void v4OutputStatResults(){
-		boolean zeroSpdFiltering=true, coutingWindowShifting=true;
+		boolean spdFiltering=true,
+				coutingWindowShifting=true;
+		double spdFilterThrshold=10;//0,10
 		
-		if(zeroSpdFiltering&&coutingWindowShifting) analysisVersion="v5";
+		if(spdFiltering&&coutingWindowShifting) analysisVersion="v5";
 		else{
-			if(!zeroSpdFiltering&&!coutingWindowShifting) analysisVersion="v4";
+			if(!spdFiltering&&!coutingWindowShifting) analysisVersion="v4";
 			else{
-				if(!zeroSpdFiltering&&coutingWindowShifting) analysisVersion="v6";
+				if(!spdFiltering&&coutingWindowShifting) analysisVersion="v6";
 				else analysisVersion="v7";
 			}
 		}
@@ -189,7 +191,7 @@ public class CorrelationAnalysis {
 									
 									//throw away low speed data
 									double speed=Double.parseDouble(fields[Constants.RAW_PROBE_IDX_SPEED]);
-									if(zeroSpdFiltering&&speed<0.01){
+									if(spdFiltering&&speed<=spdFilterThrshold){
 										continue;
 									}
 									
