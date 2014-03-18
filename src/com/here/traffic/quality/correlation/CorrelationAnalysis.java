@@ -37,11 +37,29 @@ import com.here.traffic.quality.correlation.ds.v3.MarketV3;
 import com.here.traffic.quality.correlation.ds.v3.XYMetrics;
 import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
 import com.here.traffic.quality.correlation.ds.v5.DensityBucket;
-
+import org.apache.commons.lang3.*;;
 
 public class CorrelationAnalysis {
 	public static Mean mean=new Mean();
 	public static Variance var=new Variance();
+	
+	public static HashSet<String> PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION=new HashSet<String>();
+	public static HashSet<String> PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION=new HashSet<String>();
+	
+	
+	static{
+		String[] providers={  
+				"Fleetmatics", "GPS Insight",  "Navigon",  "Navigon_global_pb",  "Telecomsys",  "Teletrac"
+				, "Teletrac_na_pb", "Telogis","Telogis_na_pb", "Trimble"};
+		for(String p: providers) PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.add(p.toUpperCase());
+		
+		providers=new String[]{  
+	"ADAC-GERMANY-PROBE", "CMA", "MIX-GBR",		"MIX_GBR_PB",		"PUNCH",		"ECOTELEMATICS",		"MASTERNAUT_GBR_PB",
+	"FRAMELOGIC",		"MASTERNAUT_SPAIN",		"CYBIT_EU_PB",		"INOSAT",		"FINDER",		"FROTCOM",		"CARRIERWEB_EU_PB",
+	"CMA_EU_PB",		"CARRIERWEB",		"VEHCO_EU_PB",		"MOBIVISION",		"PUNCH_EU_PB",		"ADAC_EU_PB",		"SATKO"};
+		for(String p: providers) PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.add(p.toUpperCase());
+	}
+	
 	
 	public static void main(String[] args) {
 		new CorrelationAnalysis().main();
@@ -56,8 +74,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		//v4OutputStatResults();
-		v4Attempt();
+		v4OutputStatResults();
+		//v4Attempt();
 	}
 	
 	
@@ -192,6 +210,12 @@ public class CorrelationAnalysis {
 									//throw away low speed data
 									double speed=Double.parseDouble(fields[Constants.RAW_PROBE_IDX_SPEED]);
 									if(spdFiltering&&speed<=spdFilterThrshold){
+										continue;
+									}
+									
+									String provider=fields[Constants.RAW_PROBE_IDX_VENDOR_DESC].toUpperCase();
+									if(PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.contains(provider)
+										||PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.contains(provider)){
 										continue;
 									}
 									
