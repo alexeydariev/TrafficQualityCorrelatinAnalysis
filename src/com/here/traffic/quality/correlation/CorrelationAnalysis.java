@@ -74,8 +74,8 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		v4OutputStatResults();
-		//v4Attempt();
+		//v4OutputStatResults();
+		v4Attempt();
 	}
 	
 	
@@ -216,7 +216,7 @@ public class CorrelationAnalysis {
 									String provider=fields[Constants.RAW_PROBE_IDX_VENDOR_DESC].toUpperCase();
 									if(PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.contains(provider)
 										||PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.contains(provider)){
-										continue;
+										//continue;
 									}
 									
 									String tmc=fields[Constants.RAW_PROBE_IDX_CTY_CODE]+fields[Constants.RAW_PROBE_IDX_TABLE_ID];
@@ -435,7 +435,7 @@ public class CorrelationAnalysis {
 		/**
 		 * Set parameters
 		 */
-		boolean[] dichotomy={true};//, false};
+		boolean[] dichotomy={false};//, false};
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
 		analysisVersion="v5";//"v4","v5","v6"
