@@ -128,7 +128,7 @@ final public class App implements AutoCloseable {
     private void downloadData() {
         m_CC = "1"; //D for 'Germany', F for 'France', 1 for 'US'
         //m_Table = "1,2";
-        m_Date = "20140213";
+        m_Date = "20131213";
         m_Suffix = "_probe";
         m_NonTmcOnly = "0";
 
