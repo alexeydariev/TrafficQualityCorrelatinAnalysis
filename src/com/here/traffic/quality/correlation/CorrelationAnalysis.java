@@ -184,11 +184,11 @@ public class CorrelationAnalysis {
 						int noOfBatches=11;
 						switch(country){
 						case "US":
-							tmcAttr=loadTMC("USA");
+							tmcAttr=TMC.loadTMC("USA");
 							noOfBatches=11;
 							break;
 						case "France":
-							tmcAttr=loadTMC("FRA");
+							tmcAttr=TMC.loadTMC("FRA");
 							noOfBatches=1;
 						}
 						for(int batch=0;batch<noOfBatches;batch++){//TODO change this based on the country
@@ -331,15 +331,20 @@ public class CorrelationAnalysis {
 				}	
 			}
 			
-			
-			
-			
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
 	}
 	
+	
 	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(HashMap<String, ArrayList<EpochTMC>> epochTMCs, String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
+		return v4ReadStatResult(epochTMCs, null, version, date, country, engine, directlyExtractedFromGroundtruthTable);
+	}
+		
+	
+	
+	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(HashMap<String, ArrayList<EpochTMC>> epochTMCs, HashMap<String, ArrayList<Integer>> tmcLanes,
+			String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
 		
 		//read stat file and analyze
 		try{
@@ -353,6 +358,9 @@ public class CorrelationAnalysis {
 					lineCnt++;
 					String line=sc.nextLine();
 					String[] fields=line.split(",");
+					
+					if(tmcLanes!=null&&!tmcLanes.containsKey(fields[0])) continue;//not include in the tmcLane hashtable
+					
 					EpochTMC epochTMC=new EpochTMC(fields[0], fields[2], Integer.parseInt(fields[1]));
 					epochTMC.condition=fields[3];
 					if(!epochTMC.condition.startsWith(engine)){
@@ -367,13 +375,27 @@ public class CorrelationAnalysis {
 					epochTMC.groundTruthSpeed=Double.parseDouble(fields[fields.length-2]);
 					epochTMC.error=Double.parseDouble(fields[fields.length-1]);
 					
-					if(epochTMCs.size()==2){//either free or congestion
-						if(epochTMC.condition.contains("Free")){
-							epochTMCs.get("Free").add(epochTMC);
+					if(epochTMCs.size()!=9){//traffic dichotomy
+						if(epochTMCs.size()==2){
+							if(epochTMC.condition.contains("Free")){
+								epochTMCs.get("Free").add(epochTMC);
+							}
+							else{
+								epochTMCs.get("Congestion").add(epochTMC);
+							}
+						}else{//further split based on # of lanes
+							String key;
+							if(epochTMC.condition.contains("Free")) key="Free";
+							else key="Congestion";
+							int maxNoOfLane=tmcLanes.get(epochTMC.tmc).get(1);
+							if(maxNoOfLane>2&&maxNoOfLane<6) key+=maxNoOfLane;
+							else{
+								if(maxNoOfLane<=2) key+="2";
+								else key+="6";
+							}
+							epochTMCs.get(key).add(epochTMC);
 						}
-						else{
-							epochTMCs.get("Congestion").add(epochTMC);
-						}
+						
 					}else{//grouped based on ground truth speed
 						double groudTruthSpd=epochTMC.groundTruthSpeed;
 						
@@ -419,12 +441,13 @@ public class CorrelationAnalysis {
 					else epochTMCs.get("Congestion").add(epochTMC);
 				}
 			}
+		
 			
 			System.out.println(date+" "+country+" line cnt:"+lineCnt);
 			for(String trafCond: epochTMCs.keySet()){
 				System.out.println("Traffic : "+trafCond+" , #OfPairs:"+ epochTMCs.get(trafCond).size());
 			}
-			
+			sc.close();
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
@@ -436,6 +459,7 @@ public class CorrelationAnalysis {
 		 * Set parameters
 		 */
 		boolean[] dichotomy={false};//, false};
+		boolean laneBased=false;//, true};
 		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
 		analysisVersion="v5";//"v4","v5","v6"
@@ -443,12 +467,25 @@ public class CorrelationAnalysis {
 		int minNOPairsInOneBucket=200; //25, 100
 	
 		HashMap<String, ArrayList<EpochTMC>> allPairs;
+		
+		HashMap<String, ArrayList<Integer>> tmcLane=TMC.loadTMCLane(country);
 		for(boolean trafficConditionDichotomy: dichotomy){
-			//put pairs into different groups based on traffic conditions
+			
+			/***
+			 * put pairs into different groups based on traffic conditions
+			 */
 			allPairs=new HashMap<String, ArrayList<EpochTMC>>();
 			if(trafficConditionDichotomy){
-				allPairs.put("Free", new ArrayList<EpochTMC>());
-				allPairs.put("Congestion", new ArrayList<EpochTMC>());
+				
+				if(laneBased){//build lane based conditions
+					for(int i=2;i<=6;i++){
+						allPairs.put("Free-"+i, new ArrayList<EpochTMC>());
+						allPairs.put("Congestion-"+i, new ArrayList<EpochTMC>());
+					}
+				}else{
+					allPairs.put("Free", new ArrayList<EpochTMC>());
+					allPairs.put("Congestion", new ArrayList<EpochTMC>());
+				}
 			}else{
 				for(int i=0;i<=8;i++){
 					allPairs.put(String.valueOf(i*10), new ArrayList<EpochTMC>());//i*10 is speed range
@@ -463,8 +500,10 @@ public class CorrelationAnalysis {
 				boolean directedExtractedFromGroundtruthTable=false;
 				v4ReadStatResult(allPairs, analysisVersion, date,country, "HTTM", directedExtractedFromGroundtruthTable);
 			}	
-			ArrayList<String> trafficConditions=new ArrayList<String>(allPairs.keySet());
-			Collections.sort(trafficConditions, new Comparator<String>(){
+			
+			//sort conditions in alphabetical order
+			ArrayList<String> conditions=new ArrayList<String>(allPairs.keySet());
+			Collections.sort(conditions, new Comparator<String>(){
 				@Override
 				public int compare(String s1, String s2) {
 					int lenDiff=s1.length()-s2.length();
@@ -484,16 +523,19 @@ public class CorrelationAnalysis {
 			
 			try{
 				String outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion;
+				outputFilePath+="_final";
 				if(!trafficConditionDichotomy) outputFilePath+="_speed";
-				outputFilePath+="_final.txt";
+				if(laneBased) outputFilePath+="_laneBased";
+				outputFilePath+=".txt";
 				
 				FileWriter fw=new FileWriter(outputFilePath);
-				for(String trafCond:trafficConditions){
+				for(String trafCond:conditions){
 					System.out.println(title+ " "+trafCond);
 					
 			
 					ArrayList<EpochTMC> epochTMCs=allPairs.get(trafCond);
 					
+					//skip over conditions with zero pairs
 					if(epochTMCs.size()==0) continue;
 					
 					ArrayList<DensityBucket> buckets=new ArrayList<DensityBucket>();
@@ -505,12 +547,14 @@ public class CorrelationAnalysis {
 					for(int i=1;i<noOfBins;i++) hardCodedBins[i]=hardCodedBins[i-1]+binStep;
 					//System.out.println(Arrays.toString(hardCodedBins));
 					
+					/***
+					 * sort epochTMC based on # of probes
+					 */
 					for(EpochTMC epochTMC:epochTMCs){
 						//TODO define the field to be ranked
 						//epochTMC.setToBeSortedField(epochTMC.noOfProbes);
 						epochTMC.setToBeSortedField(epochTMC.noOfProbesPerMile);
 					}				
-					//sort epochTMC based on # of probes
 					Collections.sort(epochTMCs, new Comparator<EpochTMC>() 
 					{
 					    public int compare(EpochTMC o1, EpochTMC o2) 
@@ -528,6 +572,9 @@ public class CorrelationAnalysis {
 					    }
 					});	
 					
+					/**
+					 * Bucketise the probe density
+					 */
 					int nextHardCodedBinIdx=0;
 					double lastValue=-1;
 					int cnt=0;
@@ -721,7 +768,6 @@ public class CorrelationAnalysis {
 			}
 		}
 		
-		
 	}
 	
 	public void v3Attempt(){
@@ -839,7 +885,7 @@ public class CorrelationAnalysis {
 	public void v2Attempt(){
 		analysisVersion="v2";
 
-		HashMap<String, TMC> tmcs=loadTMC("A0");
+		HashMap<String, TMC> tmcs=TMC.loadTMC("A0");
 		
 		String[] dates={"20131213","20131212","20131220"};
 		
@@ -1037,40 +1083,7 @@ public class CorrelationAnalysis {
 		return marketV3s;
 	}
 	
-	public HashMap<String, TMC> loadTMC(String country){
-		HashMap<String, TMC> tmcs=new HashMap<String, TMC>();
-		try{
-			BufferedReader br;
-			FileWriter fw=null;
-			File areaTMCToMarket=new File(Constants.TMC_DATA+"tmc_"+country+".txt");
-			if(areaTMCToMarket.exists()){
-				br = new BufferedReader(new FileReader(areaTMCToMarket));
-			}else{
-				br = new BufferedReader(new FileReader(Constants.TMC_DATA+"tmc_attribute.txt"));
-				fw=new FileWriter(areaTMCToMarket);
-				System.out.println("fw is not null.");
-			}
-			
-			String line;
-			while ((line = br.readLine()) != null) {
-				String[] fields=line.split(",");
-				if(!fields[69].equals(country)) continue;
-				if(fw!=null){
-					fw.write(line+"\n");
-					//System.out.println(line);
-				}
-				String tmc=fields[0];
-				double miles=Double.parseDouble(fields[1]);
-				boolean minAC=fields[42].equals("Y")?true:false,maxAC=fields[68].equals("Y")?true:false;
-				tmcs.put(tmc, new TMC(tmc, miles, minAC, maxAC, country));
-			}
-			br.close();
-			if(fw!=null) fw.close();
-		}catch(Exception ex){
-			ex.printStackTrace();
-		}
-		return tmcs;
-	}
+	
 	
 	public void mergeResultFiles(final String version){
 		try{
