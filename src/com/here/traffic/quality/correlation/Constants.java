@@ -4,7 +4,7 @@ public final class Constants {
 	/**
 	 * Directory setting
 	 */
-	public static final String DRIVE="C";
+	public static final String DRIVE="E";//E C
 	public static final String PROJECT_FOLDER=DRIVE+":/workspace/java/TrafficQualityCorrelatinAnalysis/";
 	
 	public static final String BIN_FOLDER=PROJECT_FOLDER+"bin/";
