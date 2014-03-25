@@ -392,7 +392,7 @@ public class CorrelationAnalysis {
 							if(epochTMC.condition.contains("Free")) key="Free-";
 							else key="Congestion-";
 							int maxNoOfLane=tmcs.get(epochTMC.tmc).maxNoOfLane;
-							if(maxNoOfLane>2&&maxNoOfLane<6) key+=maxNoOfLane;
+							if(maxNoOfLane>2&&maxNoOfLane<6) key+="="+maxNoOfLane;
 							else{
 								if(maxNoOfLane<=2) key+="<=2";
 								else key+=">=6";
@@ -494,8 +494,8 @@ public class CorrelationAnalysis {
 							allPairs.put("Congestion->="+i, new ArrayList<EpochTMC>());
 							break;
 						default:
-							allPairs.put("Free-"+i, new ArrayList<EpochTMC>());
-							allPairs.put("Congestion-"+i, new ArrayList<EpochTMC>());
+							allPairs.put("Free-="+i, new ArrayList<EpochTMC>());
+							allPairs.put("Congestion-="+i, new ArrayList<EpochTMC>());
 							break;
 						}
 						
