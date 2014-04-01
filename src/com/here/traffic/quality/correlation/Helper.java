@@ -17,6 +17,8 @@ import java.util.Scanner;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
+import com.here.traffic.quality.correlation.ds.v4.Probe;
+
 
 class EpochTMCPairWithProbe{
 	public static int EPOCH_SIZE_IN_SEC=180;
@@ -78,22 +80,6 @@ class EpochTMCPairWithProbe{
 	}
 }
 
-class Probe implements Comparable<Probe>{
-	String timestamp;
-	double speed;
-	String provider;
-	public Probe(String timestamp, double speed, String provider) {
-		this.timestamp=timestamp;
-		this.speed=speed;
-		this.provider=provider;
-	}
-	public String toString(){
-		return timestamp+"+"+String.format("%.2f", speed);
-	}
-	public int compareTo(Probe other){
-		return timestamp.compareTo(other.timestamp);
-	}
-}
 
 
 public class Helper {

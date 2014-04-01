@@ -9,8 +9,11 @@ import org.apache.commons.math3.stat.descriptive.rank.Min;
 
 public class Test {
 	public static void main(String[] args){
-		
-		try {
+		new Test().main();
+		/*try {
+			boolean c=(3+2>5)?true:false;
+			System.out.println(c);
+			
 			double[] x={.12,1231.123,1.23,-123.1};
 			Min min=new Min();
 			System.out.println(min.evaluate(x));
@@ -23,8 +26,21 @@ public class Test {
 			System.out.println(epochIdx);
 		} catch (ParseException e) {
 			e.printStackTrace();
-		}
-		
-		
+		}*/
 	}
+	
+	public void main(){
+		long t=System.currentTimeMillis();
+		System.out.println(f(10) );
+		long diff=System.currentTimeMillis()-t;
+		System.out.println((diff+0.0)/1000);
+	}
+	
+	long f(int i){
+		int s=0;
+		while(i-->0) s+=f(i);
+		return Math.max(s, 1);
+	}
+	
+	
 }

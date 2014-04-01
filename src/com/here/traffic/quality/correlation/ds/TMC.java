@@ -71,9 +71,10 @@ public class TMC {
 				boolean minAC=fields[42].equals("Y")?true:false,maxAC=fields[68].equals("Y")?true:false;
 				TMC tmc=new TMC(tmcID, miles, minAC, maxAC, country);
 				tmc.maxNoOfLane=Math.max(Integer.parseInt(fields[56]), Integer.parseInt(fields[57]));
-				tmc.maxExpressLane=Boolean.parseBoolean(fields[86]);
-				tmc.maxCarpoolLane=Boolean.parseBoolean(fields[87])|Boolean.parseBoolean(fields[88]);
-				
+				tmc.maxExpressLane=fields[86].equals("Y")?true:false;
+				if(fields[87].equals("Y") || fields[88].equals("Y")) tmc.maxCarpoolLane=true;
+				else tmc.maxCarpoolLane=false;
+								
 				tmcs.put(tmcID, tmc);
 			}
 			br.close();

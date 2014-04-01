@@ -128,12 +128,12 @@ final public class App implements AutoCloseable {
     private void downloadData() {
         m_CC = "1"; //D for 'Germany', F for 'France', 1 for 'US'
         //m_Table = "1,2";
-        m_Date = "20140213";
+        m_Date = "20140320";
         m_Suffix = "_probe";
         m_NonTmcOnly = "0";
 
         int noOfBatches=11, noOfTablePerBatch=3;
-        for(int i=8;i<noOfBatches;i++){
+        for(int i=0;i<noOfBatches;i++){
         	
         	//m_Table="32";
         	m_Table="";
