@@ -135,7 +135,7 @@ public class CorrelationAnalysis {
 	
 	public void v4OutputStatResults(){
 		
-		boolean findTMCsFittingtheProfile=true;
+		boolean findTMCsFittingtheProfile=false;
 			/**
 			 * Specify constraints in order to extract specific tmc-epoches
 			 */
@@ -201,7 +201,7 @@ public class CorrelationAnalysis {
 							//get the epochIdx
 							//int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
 							
-							Date systeTimestamp=null;
+							/*Date systeTimestamp=null;
 							try{
 								DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
 								systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
@@ -210,8 +210,9 @@ public class CorrelationAnalysis {
 								systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
 								//System.out.println(fields[14]+" "+line);
 								//continue;
-							}
-							int secondsOfDay=systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+							}*/
+							int secondsOfDay=CommonUtils.HMSToSeconds(fields[14].split(" ")[1]);
+									//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
 							int epochIdx=secondsOfDay/180;
 							
 							double error=Double.parseDouble(fields[30]);//capped difference
@@ -301,12 +302,13 @@ public class CorrelationAnalysis {
 									
 									if(!tmcAttr.containsKey(tmc)) continue; //TMC table does not contains this tmc
 									
-									DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
-									Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
+									//DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
+									//Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
 									
 									int delay=5;//minutes
 									int lookback=10; //minutes
-									int secondsOfDay=systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+									int secondsOfDay=CommonUtils.HMSToSeconds(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE].split(" ")[1]);
+											//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
 									
 									
 									int startEpochIdx;

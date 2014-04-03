@@ -9,7 +9,26 @@ import org.apache.commons.math3.stat.descriptive.rank.Min;
 
 public class Test {
 	public static void main(String[] args){
-		new Test().main();
+		Date systeTimestamp=null;
+		String time="2014-03-20 12:16:51";
+		try{
+			DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
+			systeTimestamp=simpDateFormat.parse(time);//GMT end time
+		}catch(Exception ex){
+			DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm");//must be small letters
+			try{
+			systeTimestamp=simpDateFormat.parse(time);//GMT end time
+			//System.out.println(fields[14]+" "+line);
+			//continue;
+			}catch(Exception e){
+			}
+		}
+		int secondsOfDay=CommonUtils.HMSToSeconds(time.split(" ")[1]);
+				//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+		int epochIdx=secondsOfDay/180;
+		System.out.println(systeTimestamp+" "+epochIdx);
+		
+		//new Test().main();
 		/*try {
 			boolean c=(3+2>5)?true:false;
 			System.out.println(c);
