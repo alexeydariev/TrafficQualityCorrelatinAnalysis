@@ -2,6 +2,7 @@ package com.here.traffic.quality.correlation;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
@@ -27,6 +28,7 @@ import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
 import sun.nio.cs.MS1250;
+import sun.tracing.ProbeSkeleton;
 
 import com.here.traffic.quality.correlation.ds.TMC;
 import com.here.traffic.quality.correlation.ds.v2.ConditionV2;
@@ -37,6 +39,7 @@ import com.here.traffic.quality.correlation.ds.v3.MarketV3;
 import com.here.traffic.quality.correlation.ds.v3.XYMetrics;
 import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
 import com.here.traffic.quality.correlation.ds.v4.Probe;
+import com.here.traffic.quality.correlation.ds.v4.Probe.SOURCE;
 import com.here.traffic.quality.correlation.ds.v5.DensityBucket;
 
 import org.apache.commons.lang3.*;;
@@ -77,7 +80,7 @@ public class CorrelationAnalysis {
 		//addProbeCntToMarketv3();
 		
 		v4OutputStatResults();
-		//v4Attempt();
+		v4Attempt();
 	}
 	
 	
@@ -120,10 +123,15 @@ public class CorrelationAnalysis {
 		try{
 				FileWriter fw=new FileWriter(filepath);
 				for(EpochTMC epochTMC: pairs){
-					fw.write(epochTMC+"\n");//only write epoch-tmc pairs with ground truth 
+					fw.write(epochTMC.toString());//only write epoch-tmc pairs with ground truth 
 					if(findTMCsFittingtheProfile){
 						Collections.sort(epochTMC.probes);
-						fw.write(epochTMC.probes+"\n");
+						if(epochTMC.probes.size()>0)
+						fw.write(","+epochTMC.probes.get(0).timestamp.split(" ")[1]+","+epochTMC.probes.get(epochTMC.probes.size()-1).timestamp.split(" ")[1]);
+						
+						fw.write("\n"+epochTMC.probes+"\n");
+					}else{
+						fw.write('\n');
 					}
 				}
 				fw.close();
@@ -133,15 +141,83 @@ public class CorrelationAnalysis {
 	}
 	
 	
+	public int loadGroundTruthAndBuildEpochTMCs(String filePath, HashMap<String, EpochTMC> epochTMCs, String tableID, String engineType
+			, String date, String country){
+		String line;
+		int lineCnt=0;
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(filePath));
+			while((line=br.readLine())!=null){
+				lineCnt+=1;
+				String[] fields=line.split(",");
+				String tmc=fields[10];
+				if(tableID.length()>0&&!tmc.startsWith(tableID)) continue;
+				//get the epochIdx
+				//int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
+				
+				/*Date systeTimestamp=null;
+				try{
+					DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
+					systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
+				}catch(Exception ex){
+					DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm");//must be small letters
+					systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
+					//System.out.println(fields[14]+" "+line);
+					//continue;
+				}*/
+				int secondsOfDay=CommonUtils.HMSToSeconds(fields[14].split(" ")[1]);
+						//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+				int epochIdx=secondsOfDay/180;
+				
+				double error=Double.parseDouble(fields[30]);//capped difference
+				String engine=fields[11];
+				String isHyw=fields[12];
+				String flowType=fields[35];//36
+				if(!isHyw.equals("Y")
+						||!engine.equals(engineType)) continue;
+				//(!engine.equals("HTTM")&&!engine.equals("HALO"))
+				
+				String condition=engine+"-"+flowType+"-"+isHyw;	
+				String id=date+"-"+epochIdx+"-"+tmc;//+"-"+condition;
+				Double groudTruthSpeed=Double.parseDouble(fields[27]);
+				EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition, groudTruthSpeed);
+				
+				
+				if(epochTMCs.containsKey(id)){
+					if(!epochTMCs.get(id).condition.equals(condition)){
+						/*System.out.println(id+"  epoch: "+fields[8]);
+						System.out.println(epochTMCs.get(id));
+						System.out.println(line);*/
+					}
+				}
+				epochTMCs.put(id, epochTMC);
+				epochTMC.error=error;
+			}//end of parsing a ground truth file
+			System.out.println("read "+lineCnt+" lines; "+epochTMCs.size()+" pairs ("+engineType+") loaded from groundtruth file  "+ country+"-"+date);
+			br.close();			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return lineCnt;
+	}
+	
+	public void parseRawProbleFile(String filePath, boolean spdFiltering, double spdFilterThrshold,
+		String tableID	){
+		
+	}
+	
 	public void v4OutputStatResults(){
 		
-		boolean findTMCsFittingtheProfile=false;
-			/**
+		SOURCE probeSource=SOURCE.ARCHIVE;
+		
+		/**
 			 * Specify constraints in order to extract specific tmc-epoches
 			 */
+			boolean findTMCsFittingtheProfile=false;
 			int[] groundTruthSpdRange={55, 100};
 			int[] probeSpdStdRange={10, 30};
-			int[] groundTruthMinusProbeSpdMean={10, 60};
+			//int[] groundTruthMinusProbeSpdMean={10, 60};
 			int[][] densityRange={{1,10},{20,40},{40,200}};
 			int targetNOofPairs=10;
 			ArrayList<ArrayList<EpochTMC>> pairsFittingProfile=new ArrayList<ArrayList<EpochTMC>>();
@@ -150,7 +226,7 @@ public class CorrelationAnalysis {
 			}
 			
 		
-		boolean spdFiltering=true,
+		boolean spdFiltering=false,
 				coutingWindowShifting=true;
 		double spdFilterThrshold=0;//0,10
 		
@@ -163,272 +239,361 @@ public class CorrelationAnalysis {
 			}
 		}
 		 
-		
-		String[] dates={"20140320","20131212","20131213","20131220","20140205"};//,"20140206","20140210"};//,};//"20131212","20131213","20131220","20140205"
+		//"20140320", "20131212","20131213","20140205",
+		String[] dates={"20140320"};//,};//"20131212","20131213","20131220","20140205"
 		String[] countries={"US"};//US, France
-		String[] engines={"HTTM"};//"HTTM", "HALO"
+		String[] engines={"HALO"};//"HTTM", "HALO"
+		String[] tableIDs={"107","108","109"};// "101","102","103" "128","129","130"
 		
 		FileWriter fw;
 		HashMap<String, TMC> tmcAttr=null;		
 				
 		try{
-			//parse ground truth files
-			for(String country: countries){
-				int noOfBatches=11;
-				switch(country){
-				case "US":
-					tmcAttr=TMC.loadTMC("US");
-					noOfBatches=11;
-					break;
-				case "France":
-					tmcAttr=TMC.loadTMC("France");
-					noOfBatches=1;
-				}
-				
-				boolean isFull=false;
-				for(String date: dates){
-					for(String engineType: engines){
-						//load epochTMCs from ground truth
-						HashMap<String, EpochTMC> epochTMCs=new HashMap<String, EpochTMC>(); 
-						String filePath=Constants.GROUND_TRUTH_DATA+country+"/groundtruth_"+date+"_"+country+".txt";
-						BufferedReader br = new BufferedReader(new FileReader(filePath));
-						String line;
-						int lineCnt=0;
-						while((line=br.readLine())!=null){
-							lineCnt+=1;
-							String[] fields=line.split(",");
-							String tmc=fields[10];
-							//get the epochIdx
-							//int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
+			for(String tableID: tableIDs){
+				//parse ground truth files
+				for(String country: countries){
+					int endingBatch=11;
+					switch(country){
+					case "US":
+						tmcAttr=TMC.loadTMC("US");
+						endingBatch=11;
+						break;
+					case "France":
+						tmcAttr=TMC.loadTMC("France");
+						endingBatch=1;
+					}
+					
+					boolean isFull=false;
+					for(String date: dates){
+						for(String engineType: engines){
+							//load epochTMCs from ground truth
+							HashMap<String, EpochTMC> epochTMCs=new HashMap<String, EpochTMC>(); 
+							String groudtruthFilePath=Constants.GROUND_TRUTH_DATA+country+"/groundtruth_"+date+"_"+country+".txt";
+						
+							int lineCnt=0;
 							
-							/*Date systeTimestamp=null;
-							try{
-								DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
-								systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
-							}catch(Exception ex){
-								DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm");//must be small letters
-								systeTimestamp=simpDateFormat.parse(fields[14]);//GMT end time
-								//System.out.println(fields[14]+" "+line);
-								//continue;
-							}*/
-							int secondsOfDay=CommonUtils.HMSToSeconds(fields[14].split(" ")[1]);
-									//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
-							int epochIdx=secondsOfDay/180;
+							lineCnt+=loadGroundTruthAndBuildEpochTMCs(groudtruthFilePath, epochTMCs, tableID, engineType, date, country);
 							
-							double error=Double.parseDouble(fields[30]);//capped difference
-							String engine=fields[11];
-							String isHyw=fields[12];
-							String flowType=fields[35];//36
-							if(!isHyw.equals("Y")
-									||!engine.equals(engineType)) continue;
-							//(!engine.equals("HTTM")&&!engine.equals("HALO"))
-							
-							String condition=engine+"-"+flowType+"-"+isHyw;	
-							String id=date+"-"+epochIdx+"-"+tmc;//+"-"+condition;
-							Double groudTruthSpeed=Double.parseDouble(fields[27]);
-							EpochTMC epochTMC=new EpochTMC(date, tmc, epochIdx, error, condition, groudTruthSpeed);
-							
-							
-							if(epochTMCs.containsKey(id)){
-								if(!epochTMCs.get(id).condition.equals(condition)){
-									/*System.out.println(id+"  epoch: "+fields[8]);
-									System.out.println(epochTMCs.get(id));
-									System.out.println(line);*/
+							/**
+							 * read raw probe data file and count
+							 */
+							//if(true) return;
+							int cnt=0;
+							if(probeSource==SOURCE.ARCHIVE){//source is archive
+								int startingBatch;
+								if(findTMCsFittingtheProfile)	startingBatch=1;
+								else startingBatch=0;
+								
+								if(tableID.length()>0){
+									startingBatch=(Integer.parseInt(tableID)-101)/3;
+									endingBatch=startingBatch+1;
 								}
-							}
-							epochTMCs.put(id, epochTMC);
-							epochTMC.error=error;
-						}//end of parsing a ground truth file
-						
-						System.out.println("read "+lineCnt+" lines; "+epochTMCs.size()+" pairs ("+engineType+") loaded from groundtruth file  "+ country+"-"+date);
-						br.close();
-						//if(true) return;
-						
-						/**
-						 * read raw probe data file and count
-						 */
-						int cnt=0;
-						
-						int startBatch;
-						if(findTMCsFittingtheProfile)	startBatch=1;
-						else startBatch=0;
-						
-						for(int batch=startBatch;batch<noOfBatches;batch++){//TODO change this based on the country
-							String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
-							if(country.equals("France")){
-								batchString="F32";
-								if(batch==1) break;
-							}
-						
-							filePath=Constants.PROBE_RAW_DATA+country+"/"+date+"/"+date+"_"+batchString+"_probe.csv";
-							BufferedReader brr = new BufferedReader(new FileReader(filePath));
-							int probeCnt=0, updateProbeCnt=0;
-							
-							
-							//start reading one probe data file
-							HashMap<String, EpochTMC> pairsVisitedInThisFile=new HashMap<String, EpochTMC>();
-							while ((line = brr.readLine()) != null) {
-								try{
-									probeCnt+=1;
-									String[] fields=line.split(",");
-									if(fields.length!=Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE+1) continue;
-									
-									//throw away low speed data
-									double speed=Double.parseDouble(fields[Constants.RAW_PROBE_IDX_SPEED]);
-									if(spdFiltering&&speed<=spdFilterThrshold){
-										continue;
+								for(int batch=startingBatch;batch<endingBatch;batch++){//TODO change this based on the country
+									String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
+									if(country.equals("France")){
+										batchString="F32";
+										if(batch==1) break;
 									}
+								
+									String rawProbeFilePath=Constants.PROBE_RAW_DATA+country+"/"+date+"/"+date+"_"+batchString+"_probe.csv";
 									
-									String provider=fields[Constants.RAW_PROBE_IDX_VENDOR_DESC].toUpperCase();
-									if(PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.contains(provider)
-										||PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.contains(provider)){
-										//continue;
-									}
+									BufferedReader brr = new BufferedReader(new FileReader(rawProbeFilePath));
+									int probeCnt=0, updateProbeCnt=0;
 									
-									String tmc=fields[Constants.RAW_PROBE_IDX_CTY_CODE]+fields[Constants.RAW_PROBE_IDX_TABLE_ID];
-									if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("+")||
-											fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("P")	
-											) tmc+="P";
-									else{
-										if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("-")||
-												fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("N")	
-												)
-										tmc+="N";
-										else {
-											continue;
+									
+									//start reading one probe data file
+									HashMap<String, EpochTMC> pairsVisitedInThisFile=new HashMap<String, EpochTMC>();
+									String newLine;
+									String[] fields;
+									
+									while ((newLine = brr.readLine()) != null) {
+										try{
+											probeCnt+=1;
+											fields=newLine.split(",");
+											if(fields.length!=Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE+1) continue;
+											
+											//throw away low speed data
+											double speed=Double.parseDouble(fields[Constants.RAW_PROBE_IDX_SPEED]);
+											if(spdFiltering&&speed<=spdFilterThrshold){
+												continue;
+											}
+											
+											String provider=fields[Constants.RAW_PROBE_IDX_VENDOR_DESC].toUpperCase();
+											String vehicle=fields[Constants.RAW_PROBE_IDX_VEHICLE_ID].toUpperCase();
+											if(PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.contains(provider)
+												||PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.contains(provider)){
+												//continue;
+											}
+											
+											String tmc=fields[Constants.RAW_PROBE_IDX_CTY_CODE]+fields[Constants.RAW_PROBE_IDX_TABLE_ID];
+											if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("+")||
+													fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("P")	
+													) tmc+="P";
+											else{
+												if(fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("-")||
+														fields[Constants.RAW_PROBE_IDX_TMC_DIR].equals("N")	
+														)
+												tmc+="N";
+												else {
+													continue;
+												}
+											}
+											tmc+=fields[Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE];
+											if(!tmcAttr.containsKey(tmc)) continue; //TMC table does not contains this tmc
+											if(tableID.length()>0&& !tmc.startsWith(tableID)) continue;
+											
+											//DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
+											//Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
+											
+											int delay=5;//minutes
+											int lookback=10; //minutes
+											int secondsOfDay=CommonUtils.HMSToSeconds(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE].split(" ")[1]);
+													//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+											Probe probe=new Probe(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE], 
+													Double.valueOf(fields[Constants.RAW_PROBE_IDX_SPEED])*0.621371 //km to mile
+													, provider, vehicle);
+											
+											
+											int startEpochIdx;
+											int endEpochIdx;
+											if(coutingWindowShifting){
+												startEpochIdx=(secondsOfDay+delay*60)/180;
+												endEpochIdx=(secondsOfDay+(delay+lookback)*60)/180;
+											}else{
+												startEpochIdx=secondsOfDay/180;
+												endEpochIdx=startEpochIdx+1;
+											}
+											for(int epochIdx=startEpochIdx;epochIdx<endEpochIdx;epochIdx++){
+												String pairID=date+"-"+epochIdx+"-"+tmc;
+												
+												EpochTMC epochTMC;
+												//a new tmc-epoch pair
+												if(!epochTMCs.containsKey(pairID)){
+													continue;
+												}else{
+													updateProbeCnt++;
+													epochTMC=epochTMCs.get(pairID);
+												}
+												if(!pairsVisitedInThisFile.containsKey(pairID)){
+													pairsVisitedInThisFile.put(pairID, epochTMC);
+												}
+												
+												epochTMC.noOfProbes+=1;
+												//epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
+												epochTMC.vehicleSet.add(fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]);
+												epochTMC.providerSet.add(fields[Constants.RAW_PROBE_IDX_VENDOR_DESC]);
+												
+												if(epochTMC.probeIDs.contains(probe.id)){
+													continue;
+												}
+												epochTMC.probes.add(probe);
+												epochTMC.probeIDs.add(probe.id);
+												
+												
+												/**
+												 * debug
+												 */
+												if(epochTMC.tmc.equals("106P05000")&&epochTMC.epochIdx==408){
+													//System.out.println(line);
+													//System.out.println("no.of probs:"+epochTMC.noOfProbes);
+												}
+											}
+										}catch(Exception ex){
+											System.out.println(newLine);
+											ex.printStackTrace();
+										}						
+									}//end of parsing a raw probe data file
+									
+									
+									//write to a file
+									for(EpochTMC epochTMC: pairsVisitedInThisFile.values()){
+										if(epochTMC.noOfProbes>0){  
+											cnt+=1;
+											//normalize the count by miles
+											epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
+											double[] array=new double[epochTMC.probes.size()];
+											for(int i=0;i<epochTMC.probes.size();i++){
+												array[i]=epochTMC.probes.get(i).speed;
+											}
+											epochTMC.probeSpeedMean=mean.evaluate(array);
+											epochTMC.probeSpeedStd=Math.sqrt(var.evaluate(array, epochTMC.probeSpeedMean) );								
+											
+											if(findTMCsFittingtheProfile){
+												for(int di=0;di<densityRange.length;di++){
+													if(epochTMC.probeSpeedStd>=probeSpdStdRange[0]&&epochTMC.probeSpeedStd<probeSpdStdRange[1]
+															&&epochTMC.noOfProbesPerMile>=densityRange[di][0]&&epochTMC.noOfProbesPerMile<densityRange[di][1]
+																	&&epochTMC.groundTruthSpeed>=groundTruthSpdRange[0]&&epochTMC.groundTruthSpeed<groundTruthSpdRange[1]
+																			&&Math.abs(epochTMC.error)>=10
+																){
+																	pairsFittingProfile.get(di).add(epochTMC);
+																	break;
+																}
+																
+												}
+												isFull=isFull(pairsFittingProfile, targetNOofPairs);
+												if(isFull) break;
+											}
 										}
 									}
-									tmc+=fields[Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE];
-									
-									if(!tmcAttr.containsKey(tmc)) continue; //TMC table does not contains this tmc
-									
-									//DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
-									//Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
-									
-									int delay=5;//minutes
-									int lookback=10; //minutes
-									int secondsOfDay=CommonUtils.HMSToSeconds(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE].split(" ")[1]);
-											//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
-									
-									
-									int startEpochIdx;
-									int endEpochIdx;
-									if(coutingWindowShifting){
-										startEpochIdx=(secondsOfDay+delay*60)/180;
-										endEpochIdx=(secondsOfDay+(delay+lookback)*60)/180;
-									}else{
-										startEpochIdx=secondsOfDay/180;
-										endEpochIdx=startEpochIdx+1;
-									}
-									
-									for(int epochIdx=startEpochIdx;epochIdx<endEpochIdx;epochIdx++){
-										String id=date+"-"+epochIdx+"-"+tmc;
+									System.out.println(country+"-"+date+"-"+batchString+"  has : "+probeCnt+" probes; "+updateProbeCnt+" are mapped to the groundtruth pairs");//no of pairs read out
+									brr.close();
+
+									System.out.println("# of pairsFittingProfile: "+pairsFittingProfile.get(0).size()
+											+"\t"+pairsFittingProfile.get(1).size()+"\t"+pairsFittingProfile.get(2).size());
+									if(isFull) break;
+
+								}
+							}else{//source is qml file
+								//TODO filepath 
+								String qmlProbeFilePath=Constants.DATA_FOLDER+"/HALO_Parser/output_qml-2014-03-20-05-00-2014-03-21-05-00-fd445ee6-73b9-4d86-a290-a774c076a22d_HighwayTMCsOnly.csv";
+								
+								BufferedReader brr = new BufferedReader(new FileReader(qmlProbeFilePath));
+								int probeCnt=0, updateProbeCnt=0;
+								
+								//start reading one probe data file
+								HashMap<String, EpochTMC> pairsVisitedInThisFile=new HashMap<String, EpochTMC>();
+								String newLine;
+								String[] fields;
+								brr.readLine();//read off the header line (the first line)
+								while ((newLine = brr.readLine()) != null) {
+									try{
+										probeCnt+=1;
+										fields=newLine.split(",");
 										
-										EpochTMC epochTMC;
-										//a new tmc-epoch pair
-										if(!epochTMCs.containsKey(id)){
+										//TODO Change all the field index
+										if(fields.length!=33) continue;
+										String tmc=fields[1];
+										if(!tmcAttr.containsKey(tmc)) continue; //TMC table does not contains this tmc
+										
+										//throw away low speed data
+										double speed;
+										if(fields[27].length()>0) speed=Double.parseDouble(fields[27])/1.609344; //speed in kph
+										else{
+											if(fields[26].length()>0) speed=Double.parseDouble(fields[26])/1.609344;
+											else continue;
+										}
+										
+										if(spdFiltering&&speed<=spdFilterThrshold){
 											continue;
+										}
+										
+										String dataType=fields[19];
+										
+										if(dataType.equals("probe")){
+											
 										}else{
-											updateProbeCnt++;
-											epochTMC=epochTMCs.get(id);
-										}
-										if(!pairsVisitedInThisFile.containsKey(id)){
-											pairsVisitedInThisFile.put(id, epochTMC);
+											continue;
 										}
 										
-										epochTMC.noOfProbes+=1;
-										//epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
-										epochTMC.vehicleSet.add(fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]);
-										epochTMC.providerSet.add(fields[Constants.RAW_PROBE_IDX_VENDOR_DESC]);
-										
-										
-										Probe probe=new Probe(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE], Double.valueOf(fields[Constants.RAW_PROBE_IDX_SPEED]), provider);
-										
-										epochTMC.probes.add(probe);
-										
-										
-										
-										/**
-										 * debug
-										 */
-										if(epochTMC.tmc.equals("106P05000")&&epochTMC.epochIdx==408){
-											//System.out.println(line);
-											//System.out.println("no.of probs:"+epochTMC.noOfProbes);
+										String provider=fields[20].toUpperCase();
+										String vehicle=fields[23].toUpperCase();
+										if(PROVIDER_BLACKLIST_BAD_HEADING_DISTRIBUTION.contains(provider)
+											||PROVIDER_BLACKLIST_BAD_SPEED_DISTRIBUTION.contains(provider)){
+											//continue;
 										}
-									}
-								}catch(Exception ex){
-									System.out.println(line);
-									ex.printStackTrace();
-								}						
-							}//end of parsing a raw probe data file
-							
-						
-							for(EpochTMC epochTMC: pairsVisitedInThisFile.values()){
-								if(epochTMC.noOfProbes>0){  
-									cnt+=1;
-									//normalize the count by miles
-									epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
-									double[] array=new double[epochTMC.probes.size()];
-									for(int i=0;i<epochTMC.probes.size();i++){
-										array[i]=epochTMC.probes.get(i).speed;
-									}
-									epochTMC.probeSpeedMean=mean.evaluate(array);
-									epochTMC.probeSpeedStd=Math.sqrt(var.evaluate(array, epochTMC.probeSpeedMean) );								
+										
+										if(tableID.length()>0&& !tmc.startsWith(tableID)) continue;
+										//System.out.println();
+										
 									
-									if(findTMCsFittingtheProfile){
-										for(int di=0;di<densityRange.length;di++){
-											if(epochTMC.probeSpeedStd>=probeSpdStdRange[0]&&epochTMC.probeSpeedStd<probeSpdStdRange[1]
-													&&epochTMC.noOfProbesPerMile>=densityRange[di][0]&&epochTMC.noOfProbesPerMile<densityRange[di][1]
-															&&epochTMC.groundTruthSpeed>=groundTruthSpdRange[0]&&epochTMC.groundTruthSpeed<groundTruthSpdRange[1]
-																	&&Math.abs(epochTMC.error)>=10
-														){
-															pairsFittingProfile.get(di).add(epochTMC);
-															break;
-														}
-														
+										
+										Probe probe=new Probe(fields[0].split("\\.")[0].replace('T', ' '), 
+												speed
+												, provider, vehicle);
+										
+										//DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
+										//Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
+										
+										int delay=5;//minutes
+										int lookback=10; //minutes
+										int secondsOfDay=CommonUtils.HMSToSeconds(fields[0].split("T")[1].split("\\.")[0]);
+												//systeTimestamp.getHours()*3600+systeTimestamp.getMinutes()*60+systeTimestamp.getSeconds();
+
+										int startEpochIdx;
+										int endEpochIdx;
+										if(coutingWindowShifting){
+											startEpochIdx=(secondsOfDay+delay*60)/180;
+											endEpochIdx=(secondsOfDay+(delay+lookback)*60)/180;
+										}else{
+											startEpochIdx=secondsOfDay/180;
+											endEpochIdx=startEpochIdx+1;
 										}
-										isFull=isFull(pairsFittingProfile, targetNOofPairs);
-										if(isFull) break;
+										for(int epochIdx=startEpochIdx;epochIdx<endEpochIdx;epochIdx++){
+											String pairID=date+"-"+epochIdx+"-"+tmc;
+											
+											EpochTMC epochTMC;
+											//a new tmc-epoch pair
+											if(!epochTMCs.containsKey(pairID)){
+												continue;
+											}else{
+												updateProbeCnt++;
+												epochTMC=epochTMCs.get(pairID);
+											}
+											if(!pairsVisitedInThisFile.containsKey(pairID)){
+												pairsVisitedInThisFile.put(pairID, epochTMC);
+											}
+											
+											epochTMC.noOfProbes+=1;
+											//epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
+											epochTMC.vehicleSet.add(fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]);
+											epochTMC.providerSet.add(fields[Constants.RAW_PROBE_IDX_VENDOR_DESC]);
+											
+											if(epochTMC.probeIDs.contains(probe.id)){
+												continue;
+											}
+											epochTMC.probes.add(probe);
+											epochTMC.probeIDs.add(probe.id);
+										}
+									}catch(Exception ex){
+										System.out.println(newLine);
+										ex.printStackTrace();
+									}						
+								}//end of parsing a raw probe data file
+								
+								
+								//calculate the probe speed mean and std for each pair
+								for(EpochTMC epochTMC: pairsVisitedInThisFile.values()){
+									if(epochTMC.noOfProbes>0){  
+										cnt+=1;
+										//normalize the count by miles
+										epochTMC.noOfProbesPerMile=epochTMC.noOfProbes/tmcAttr.get(epochTMC.tmc).miles;
+										double[] array=new double[epochTMC.probes.size()];
+										for(int i=0;i<epochTMC.probes.size();i++){
+											array[i]=epochTMC.probes.get(i).speed;
+										}
+										epochTMC.probeSpeedMean=mean.evaluate(array);
+										epochTMC.probeSpeedStd=Math.sqrt(var.evaluate(array, epochTMC.probeSpeedMean) );
 									}
 								}
+								System.out.println(country+"-"+date+"-"+"  has : "+probeCnt+" probes; "+updateProbeCnt+" are mapped to the groundtruth pairs");//no of pairs read out
+								brr.close();
+								System.out.println("# of pairsFittingProfile: "+pairsFittingProfile.get(0).size()
+										+"\t"+pairsFittingProfile.get(1).size()+"\t"+pairsFittingProfile.get(2).size());
 							}
-							System.out.println(country+"-"+date+"-"+batchString+"  has : "+probeCnt+" probes; "+updateProbeCnt+" are mapped to the groundtruth pairs");//no of pairs read out
-							brr.close();
-
-							System.out.println("# of pairsFittingProfile: "+pairsFittingProfile.get(0).size()
-									+"\t"+pairsFittingProfile.get(1).size()+"\t"+pairsFittingProfile.get(2).size());
-							if(isFull) break;
-
-						}
-						
-						System.out.println("# of pairs is "+epochTMCs.size()+" # of pairs with rt probes is "+cnt+ "  percentage is "+String.format("%.2f", (cnt+0.0)/epochTMCs.size()) );
-						//if(true) return;
-						ArrayList<EpochTMC> pairs;
-						String outputFilePath;
-						if(!findTMCsFittingtheProfile){
-							//output the stats to a file
-							outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+country+".csv";
+							
+							
+							System.out.println("# of pairs is "+epochTMCs.size()+" # of pairs with rt probes is "+cnt+ "  percentage is "+String.format("%.2f", (cnt+0.0)/epochTMCs.size()) );
+							
+							//if(true) return;
+							ArrayList<EpochTMC> pairs;
+							String outputFilePath;
+							outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_";
+							if(tableID.length()==0) outputFilePath+=country;
+							else outputFilePath+=tableID;
+							if(probeSource==SOURCE.QML) outputFilePath+="_qml";
+							outputFilePath+=".csv";
 							pairs=new ArrayList<EpochTMC>();
 							for(EpochTMC epochTMC: epochTMCs.values()) pairs.add(epochTMC);
 							writeEpochTMCPairsToFile(pairs, outputFilePath, findTMCsFittingtheProfile);
-						}else{
-							if(isFull){
-								for(int di=0;di<densityRange.length;di++){
-									outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+country+
-											"_density-"+Arrays.toString(densityRange[di]).replace(" ", "")+"_wProbes.txt";
-									pairs=new ArrayList<EpochTMC>();
-									for(EpochTMC epochTMC: pairsFittingProfile.get(di)) pairs.add(epochTMC);
-									writeEpochTMCPairsToFile(pairs, outputFilePath, findTMCsFittingtheProfile);
-								}
-								break;
-							}
-						}
-						
-						
-					}//end of parsing probe files for one day
-					if(isFull) break;
-				}	
+							
+							
+						}//end of parsing probe files for one day
+						if(isFull) break;
+					}	
+				}
 			}
+			
+			
 			
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -436,14 +601,20 @@ public class CorrelationAnalysis {
 	}
 	
 	
-	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(HashMap<String, ArrayList<EpochTMC>> epochTMCs, String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
-		return v4ReadStatResult(epochTMCs, null, version, date, country, engine, directlyExtractedFromGroundtruthTable);
+	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(String filepath, HashMap<String, ArrayList<EpochTMC>> epochTMCs, String version, String  date,
+			String country, String engine, boolean directlyExtractedFromGroundtruthTable
+			){
+
+		return v4ReadStatResult(filepath, epochTMCs, null, version, date, country, engine, directlyExtractedFromGroundtruthTable);
 	}
 		
 	
 	
-	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(HashMap<String, ArrayList<EpochTMC>> epochTMCs, HashMap<String, TMC> tmcs,
-			String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable){
+	public HashMap<String,ArrayList<EpochTMC>> v4ReadStatResult(
+			String filepath,
+			HashMap<String, ArrayList<EpochTMC>> epochTMCs, HashMap<String, TMC> tmcs,
+			String version, String  date, String country, String engine, boolean directlyExtractedFromGroundtruthTable
+		){
 		
 		//read stat file and analyze
 		try{
@@ -451,8 +622,7 @@ public class CorrelationAnalysis {
 			int lineCnt=0;
 			System.out.println(epochTMCs.keySet());
 			if(!directlyExtractedFromGroundtruthTable){//stat file is generated by parsing raw probe data files
-				String filepath;
-				filepath=Constants.RESULT_DATA+version+"/"+version+"_"+date+"_"+country+".csv";
+
 				sc=new Scanner(new File(filepath));
 				while(sc.hasNextLine()){
 					lineCnt++;
@@ -472,44 +642,48 @@ public class CorrelationAnalysis {
 					epochTMC.probeSpeedMean=Double.parseDouble(fields[6]);
 					epochTMC.probeSpeedStd=Double.parseDouble(fields[7]);
 					
+					epochTMC.providerSetSize=Integer.parseInt(fields[fields.length-3]);
+					
 					epochTMC.groundTruthSpeed=Double.parseDouble(fields[fields.length-2]);
 					epochTMC.error=Double.parseDouble(fields[fields.length-1]);
 					
-					if(epochTMCs.size()!=9){//traffic dichotomy
-						if(epochTMCs.size()==2){
-							if(epochTMC.condition.contains("Free")){
-								epochTMCs.get("Free").add(epochTMC);
-							}
-							else{
-								epochTMCs.get("Congestion").add(epochTMC);
-							}
-						}else{
-							if(epochTMCs.size()==4){//HOVorExpressLane
-								String key;
-								if(epochTMC.condition.contains("Free")) key="Free-";
-								else key="Congestion-";
-								boolean speicalLane=tmcs.get(epochTMC.tmc).maxCarpoolLane|tmcs.get(epochTMC.tmc).maxExpressLane;
-								if(speicalLane) key+="with HOVorExpressLane";
-								else key+="w/o HOVorExpressLane";									
-								//System.out.println("key="+key);
-								epochTMCs.get(key).add(epochTMC);
-							}else{//# of lanes
-								//further split based on # of lanes
-								String key;
-								if(epochTMC.condition.contains("Free")) key="Free-";
-								else key="Congestion-";
-								int maxNoOfLane=tmcs.get(epochTMC.tmc).maxNoOfLane;
-								if(maxNoOfLane>2&&maxNoOfLane<6) key+="="+maxNoOfLane;
-								else{
-									if(maxNoOfLane<=2) key+="<=2";
-									else key+=">=6";
-								}
-								//System.out.println("key="+key);
-								epochTMCs.get(key).add(epochTMC);
-							}
+					int noOfConditions=epochTMCs.size();
+					
+					String key;
+					switch (noOfConditions) {
+					case 1:
+						epochTMCs.get("All").add(epochTMC);
+						break;
+					case 2:
+						if(epochTMC.condition.contains("Free")){
+							epochTMCs.get("Free").add(epochTMC);
 						}
-						
-					}else{//grouped based on ground truth speed
+						else{
+							epochTMCs.get("Congestion").add(epochTMC);
+						}
+						break;
+					case 4://HOVorExpressLane
+						if(epochTMC.condition.contains("Free")) key="Free-";
+						else key="Congestion-";
+						boolean speicalLane=tmcs.get(epochTMC.tmc).maxCarpoolLane|tmcs.get(epochTMC.tmc).maxExpressLane;
+						if(speicalLane) key+="with HOVorExpressLane";
+						else key+="w/o HOVorExpressLane";									
+						//System.out.println("key="+key);
+						epochTMCs.get(key).add(epochTMC);
+						break;
+					case 10://# of lanes
+						if(epochTMC.condition.contains("Free")) key="Free-";
+						else key="Congestion-";
+						int maxNoOfLane=tmcs.get(epochTMC.tmc).maxNoOfLane;
+						if(maxNoOfLane>2&&maxNoOfLane<6) key+="="+maxNoOfLane;
+						else{
+							if(maxNoOfLane<=2) key+="<=2";
+							else key+=">=6";
+						}
+						//System.out.println("key="+key);
+						epochTMCs.get(key).add(epochTMC);
+						break;
+					case 9://speed split case
 						double groudTruthSpd=epochTMC.groundTruthSpeed;
 						
 						//get the speed intervals
@@ -535,6 +709,9 @@ public class CorrelationAnalysis {
 						//System.out.println("spd:"+groudTruthSpd+" group:"+l);
 						//add the pair to the corresponding group
 						epochTMCs.get(String.valueOf(l*10)).add(epochTMC);
+						break;
+					default:
+						break;
 					}
 				}
 			}else{//stat file directly extracted from ground truth table
@@ -569,66 +746,76 @@ public class CorrelationAnalysis {
 		/**
 		 * Set conditions
 		 */
-		boolean[] dichotomy={true};//, false};
+		boolean noTrafficConditionSplit=false;
+		boolean trafficConditionDichotomy=true;//, false};
 		boolean laneBased=false;//, true};
-		boolean carpoolExpressLane=true;
-		String specificMarket="";//""   //produce results for a particular market, e.g. "107" means Chicago
+		boolean carpoolExpressLane=false;
+		boolean samePopulationForBuckets=false;
+		
+		SOURCE probeDataSource=SOURCE.ARCHIVE;
+		
+		String[] tableIDs={"107","108","109"};//"107""101","102","103" "128","129","130"  //produce results for a particular market, e.g. "107" means Chicago
 		
 		
 		/**
 		 * data source parameters
 		 */
-		String[] dates={"20131212","20131213","20131220","20140205"};//"20131212","20131213","20131220","20140205"
+		String[] dates={"20140320"};//,"20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
-		analysisVersion="v5";//"v4","v5","v6"
+		analysisVersion="v6";//"v4","v5","v6"
 		boolean plotting=false;//true, false;
-		int minNOPairsInOneBucket=200; //25, 100
+		int minNOPairsInOneBucket=200; //default : 200
 	
 		HashMap<String, ArrayList<EpochTMC>> allPairs;
 		HashMap<String, TMC> tmcs=TMC.loadTMC(country);
 		
-		for(boolean trafficConditionDichotomy: dichotomy){
-			
+		for(String tableID: tableIDs){
 			/***
 			 * put pairs into different groups based on traffic conditions
 			 */
 			allPairs=new HashMap<String, ArrayList<EpochTMC>>();
-			if(trafficConditionDichotomy){
-				
-				if(laneBased){//build lane based conditions
-					for(int i=2;i<=6;i++){
-						switch(i){
-						case 2:
-							allPairs.put("Free-<="+i, new ArrayList<EpochTMC>());
-							allPairs.put("Congestion-<="+i, new ArrayList<EpochTMC>());
-							break;
-						case 6:
-							allPairs.put("Free->="+i, new ArrayList<EpochTMC>());
-							allPairs.put("Congestion->="+i, new ArrayList<EpochTMC>());
-							break;
-						default:
-							allPairs.put("Free-="+i, new ArrayList<EpochTMC>());
-							allPairs.put("Congestion-="+i, new ArrayList<EpochTMC>());
-							break;
+			
+			if(noTrafficConditionSplit){
+				allPairs.put("All", new ArrayList<EpochTMC>());
+			}else{
+				if(trafficConditionDichotomy){
+					if(laneBased){//build lane based conditions
+						for(int i=2;i<=6;i++){
+							switch(i){
+							case 2:
+								allPairs.put("Free-<="+i, new ArrayList<EpochTMC>());
+								allPairs.put("Congestion-<="+i, new ArrayList<EpochTMC>());
+								break;
+							case 6:
+								allPairs.put("Free->="+i, new ArrayList<EpochTMC>());
+								allPairs.put("Congestion->="+i, new ArrayList<EpochTMC>());
+								break;
+							default:
+								allPairs.put("Free-="+i, new ArrayList<EpochTMC>());
+								allPairs.put("Congestion-="+i, new ArrayList<EpochTMC>());
+								break;
+							}
+							
 						}
-						
+					}else{
+						if(carpoolExpressLane){
+							allPairs.put("Free-with HOVorExpressLane", new ArrayList<EpochTMC>());
+							allPairs.put("Congestion-with HOVorExpressLane", new ArrayList<EpochTMC>());
+							allPairs.put("Free-w/o HOVorExpressLane", new ArrayList<EpochTMC>());
+							allPairs.put("Congestion-w/o HOVorExpressLane", new ArrayList<EpochTMC>());
+						}else{
+							allPairs.put("Free", new ArrayList<EpochTMC>());
+							allPairs.put("Congestion", new ArrayList<EpochTMC>());
+						}
 					}
 				}else{
-					if(carpoolExpressLane){
-						allPairs.put("Free-with HOVorExpressLane", new ArrayList<EpochTMC>());
-						allPairs.put("Congestion-with HOVorExpressLane", new ArrayList<EpochTMC>());
-						allPairs.put("Free-w/o HOVorExpressLane", new ArrayList<EpochTMC>());
-						allPairs.put("Congestion-w/o HOVorExpressLane", new ArrayList<EpochTMC>());
-					}else{
-						allPairs.put("Free", new ArrayList<EpochTMC>());
-						allPairs.put("Congestion", new ArrayList<EpochTMC>());
+					for(int i=0;i<=8;i++){
+						allPairs.put(String.valueOf(i*10), new ArrayList<EpochTMC>());//i*10 is speed range
 					}
 				}
-			}else{
-				for(int i=0;i<=8;i++){
-					allPairs.put(String.valueOf(i*10), new ArrayList<EpochTMC>());//i*10 is speed range
-				}
 			}
+			
+			
 			
 			//print out Title of the stats
 			String title="\t All Markets in "+country+": HTTM-";
@@ -636,7 +823,16 @@ public class CorrelationAnalysis {
 			for(String date: dates){
 				title+=date+" ";
 				boolean directedExtractedFromGroundtruthTable=false;
-				v4ReadStatResult(allPairs, tmcs, analysisVersion, date,country, "HTTM", directedExtractedFromGroundtruthTable);
+				
+				String filepath;
+				
+				//filepath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+country+".csv";
+				filepath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+tableID;
+				if(probeDataSource==SOURCE.QML) filepath+="_qml";
+				filepath+=".csv";
+				System.out.println("Load result file "+filepath);
+				
+				v4ReadStatResult(filepath, allPairs, tmcs, analysisVersion, date,country, "HALO", directedExtractedFromGroundtruthTable);
 			}	
 			
 			//sort conditions in alphabetical order
@@ -665,7 +861,9 @@ public class CorrelationAnalysis {
 				if(!trafficConditionDichotomy) outputFilePath+="_speed";
 				if(laneBased) outputFilePath+="_laneBased";
 				if(carpoolExpressLane) outputFilePath+="_specialLane";
-				if(specificMarket.length()>0) outputFilePath+="_"+specificMarket;
+				if(tableID.length()>0) outputFilePath+="_"+tableID;
+				if(probeDataSource==SOURCE.QML) outputFilePath+="_qml";
+				if(minNOPairsInOneBucket!=200) outputFilePath+="_bucketsize="+minNOPairsInOneBucket;
 				outputFilePath+=".txt";
 				
 				FileWriter fw=new FileWriter(outputFilePath);
@@ -723,8 +921,8 @@ public class CorrelationAnalysis {
 					
 					for(int pairIdx=0;pairIdx<epochTMCs.size();pairIdx++){					
 						EpochTMC epochTMC=epochTMCs.get(pairIdx);
-						if(specificMarket.length()>0){
-							if(!epochTMC.tmc.substring(0,3).equals(specificMarket))continue;
+						if(tableID.length()>0){
+							if(!epochTMC.tmc.substring(0,3).equals(tableID))continue;
 						}
 						
 						if(lastBucket.pairs.size()>=minNOPairsInOneBucket
@@ -733,7 +931,7 @@ public class CorrelationAnalysis {
 							
 							DensityBucket dBucket=new DensityBucket();
 							dBucket.lowerBound=epochTMC.fieldToBeSorted;
-							if(binIdx>1){//not first bucket, update the upper bound of previous bucket 
+							if(binIdx>=1){//not first bucket, update the upper bound of previous bucket 
 								buckets.get(buckets.size()-1).upperBound=dBucket.lowerBound;
 							}
 							
@@ -746,7 +944,7 @@ public class CorrelationAnalysis {
 						cnt++;
 						lastBucket=buckets.get(buckets.size()-1);
 						lastBucket.pairs.add(epochTMC);
-						
+						//lastBucket.providerSetSize+=epochTMC.providerSetSize;
 						/*if(!isCongestion&&avgProbeCnt[b]>30){
 							System.out.println("density :" + avgProbeCnt[i]);
 							System.out.println(valuesWithinBin.get(i));
@@ -755,7 +953,7 @@ public class CorrelationAnalysis {
 
 					
 					//System.out.println("densityIdx="+binIdx);
-					double sum=0;
+					double sum=0, sum1=0;
 				
 					/**
 					 * calculate stats for each bucket
@@ -763,14 +961,17 @@ public class CorrelationAnalysis {
 					for(int i=0;i<binIdx;i++){
 						DensityBucket dBucket=buckets.get(i);
 						
-						int n=dBucket.pairs.size();						
-						HashSet<Integer> population=CommonUtils.randomByShuffle(minNOPairsInOneBucket, n);
+						int n=dBucket.pairs.size();
+						sum1+=n;
+						
+						HashSet<Integer> population=null;
+						if(samePopulationForBuckets)population=CommonUtils.randomByShuffle(minNOPairsInOneBucket, n);
 						
 						double[] errors=new double[n];
 						double[] groundTruthSpeed=new double[n];
 						
 						for(int pairIdx=0;pairIdx<n;pairIdx++){
-							if(!population.contains(pairIdx)) continue;
+							if(samePopulationForBuckets&&!population.contains(pairIdx)) continue;
 							EpochTMC epochTMC=dBucket.pairs.get(pairIdx);
 							
 							dBucket.avgProbeCnt+=epochTMC.noOfProbes;
@@ -781,9 +982,21 @@ public class CorrelationAnalysis {
 							errors[dBucket.pairCnt]=epochTMC.error;
 							groundTruthSpeed[dBucket.pairCnt]=epochTMC.groundTruthSpeed;
 							
-							if(Math.abs(epochTMC.error)>10) dBucket.cntOfPairFallOutBand+=1.0;
+							/*if(i==1&&pairIdx<10){
+								System.out.println(epochTMC);
+							}*/
+						
+							if(Math.abs(epochTMC.error)>10){
+								/*if(i==binIdx-1){
+									System.out.println(epochTMC);
+								}*/
+								
+								dBucket.cntOfPairFallOutBand+=1.0;
+							}
 							dBucket.pairCnt+=1;
 						}
+						
+						
 						
 						dBucket.avgProbeCnt/=dBucket.pairCnt;
 						dBucket.avgProbeCntPerMile/=dBucket.pairCnt;
@@ -815,11 +1028,6 @@ public class CorrelationAnalysis {
 							}
 						}
 						
-						for(int j=0;j<errors.length;j++){
-							errors[j]=Math.abs(errors[j] );
-						}
-						
-						
 						sum+=dBucket.pairCnt;
 					}
 					
@@ -828,25 +1036,25 @@ public class CorrelationAnalysis {
 					 * Output to files to be plotted by python
 					 */
 					fw.write("---"+trafCond+"\n");
-					System.out.println("cnt="+cnt+" sum="+sum);
-					System.out.println("densityRange,#ofEpochTMCPairs,avgDensity,avgError,avgQS");
+					System.out.println("pariCnt="+cnt+" sumOfPairCntOfBuckets="+sum+" sum1="+sum1);
+					System.out.println("densityRange,#ofPairs,avgProbeSpdStd,avgProbeSpdMean,avgDensity,avgError,avgStdError,avgQS,avgGroundTruthSpd");
 					String msg;
 					for(int i=0;i<binIdx;i++){
 						msg="";
 						DensityBucket dBucket=buckets.get(i);
-						if(i>0) msg+="["+dBucket.lowerBound+"~";
-						else msg+="[ 0.0~";
-						if(i<binIdx-1) msg+=dBucket.upperBound+"),";
+						if(i>0) msg+="["+String.format("%5.2f", dBucket.lowerBound)+"~";
+						else msg+="[ 0.00~";
+						if(i<binIdx-1) msg+=String.format("%5.2f",dBucket.upperBound)+"),";
 						else msg+="     ],";
-						msg+=dBucket.pairCnt+",";
+						msg+=String.format("%7d", dBucket.pairCnt)+",";
 						msg+=//String.format("%.2f", avgProbeCnt[i])
-							String.format("%.2f", dBucket.avgProbSpdStd)+","+String.format("%.2f", dBucket.avgProbeSpdMean)
+							String.format("%13.2f", dBucket.avgProbSpdStd)+","+String.format("%13.2f", dBucket.avgProbeSpdMean)
 								
-							+","+String.format("%.2f", dBucket.avgProbeCntPerMile)
-							+","+String.format("%.2f", dBucket.avgError)+","+String.format("%.2f", dBucket.stdError)
-							+","+String.format("%.2f",dBucket.avgQualityScore)+"%"
-							+","+String.format("%.2f", dBucket.avgGroundTruthSpeed);
-						
+							+","+String.format("%10.2f", dBucket.avgProbeCntPerMile)
+							+","+String.format("%10.2f", dBucket.avgError)+","+String.format("%10.2f", dBucket.stdError)
+							+","+String.format("%10.2f",dBucket.avgQualityScore)+"%"
+							+","+String.format("%10.2f", dBucket.avgGroundTruthSpeed);
+						//System.out.print(dBucket.providerSetSize+" ");
 						System.out.println(msg);
 						fw.write(msg+"\n");
 					}
@@ -869,7 +1077,7 @@ public class CorrelationAnalysis {
 						DensityBucket dBucket=buckets.get(i);
 						avgProbeCnt[i]=dBucket.avgProbeCnt;
 						avgProbeCntPerMile[i]=dBucket.avgProbeCntPerMile;
-						avgErrors[i]=dBucket.avgError;
+						avgErrors[i]=Math.abs(dBucket.avgError);
 						avgQualityScore[i]=dBucket.avgQualityScore;
 						
 						if(buckets.size()>0){
@@ -901,8 +1109,6 @@ public class CorrelationAnalysis {
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}
-			
-			
 			
 			/**
 			 * Plot the 3D scatter

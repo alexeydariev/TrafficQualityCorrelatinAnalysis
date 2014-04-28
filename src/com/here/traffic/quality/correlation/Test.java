@@ -3,12 +3,21 @@ package com.here.traffic.quality.correlation;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.apache.commons.math3.stat.descriptive.rank.Min;
+import org.math.plot.utils.Array;
 
 public class Test {
 	public static void main(String[] args){
+		int [] arr={13,15,34,623,21,1,9,721};
+		Arrays.sort(arr, 2,7);
+		System.out.println(Arrays.toString(arr));
+		
+		
+		System.out.println("2014-03-20T13:39:20.417z".split("\\.")[0].replace('T', ' '));
+		
 		Date systeTimestamp=null;
 		String time="2014-03-20 12:16:51";
 		try{

@@ -280,7 +280,9 @@ public class Helper {
 						}else{
 							epochTMC=pairsWithProbe.get(id);
 						}
-						epochTMC.probes.add(new Probe(CommonUtils.secondsToHMS(secondsOfDay), speed, fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]));
+						epochTMC.probes.add(
+								new Probe(CommonUtils.secondsToHMS(secondsOfDay), speed, 
+										fields[Constants.RAW_PROBE_IDX_VEHICLE_ID], fields[Constants.RAW_PROBE_IDX_VEHICLE_ID]));
 					}
 				}
 			}

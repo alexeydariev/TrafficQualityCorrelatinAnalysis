@@ -15,11 +15,15 @@ public class EpochTMC {
 	public double noOfProbes;
 	public HashSet<String> vehicleSet;
 	public int noOfVehicles;
+	
 	public HashSet<String> providerSet;
+	public int providerSetSize;
+	
 	public int noOfProviders;
 	public double noOfProbesPerMile;
 	
 	public ArrayList<Probe> probes;//store the speed of probes corresponding to this pair
+	public HashSet<String> probeIDs; //timestamp+provideID+vehicleID
 	
 	public double probeSpeedMean;
 	public double probeSpeedStd;
@@ -38,6 +42,7 @@ public class EpochTMC {
 		vehicleSet=new HashSet<String>();
 		providerSet=new HashSet<String>();		
 		probes=new ArrayList<Probe>();
+		probeIDs=new HashSet<String>();
 	}
 	
 	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition, double groundTruthSpeed){
