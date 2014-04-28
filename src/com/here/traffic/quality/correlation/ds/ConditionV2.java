@@ -1,4 +1,4 @@
-package com.here.traffic.quality.correlation.ds.v2;
+package com.here.traffic.quality.correlation.ds;
 
 import java.util.HashSet;
 

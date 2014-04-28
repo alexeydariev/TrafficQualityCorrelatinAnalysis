@@ -1,10 +1,8 @@
-package com.here.traffic.quality.correlation.ds.v5;
+package com.here.traffic.quality.correlation.ds;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-
-import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
 
 public class DensityBucket {
   public double lowerBound;

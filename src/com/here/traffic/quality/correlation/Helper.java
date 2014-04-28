@@ -17,7 +17,7 @@ import java.util.Scanner;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
-import com.here.traffic.quality.correlation.ds.v4.Probe;
+import com.here.traffic.quality.correlation.ds.Probe;
 
 
 class EpochTMCPairWithProbe{

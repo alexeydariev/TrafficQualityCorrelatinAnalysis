@@ -1,4 +1,4 @@
-package com.here.traffic.quality.correlation.ds.v4;
+package com.here.traffic.quality.correlation.ds;
 
 import com.here.traffic.quality.correlation.CommonUtils;
 

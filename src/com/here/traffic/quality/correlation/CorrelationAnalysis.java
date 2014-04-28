@@ -30,17 +30,17 @@ import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import sun.nio.cs.MS1250;
 import sun.tracing.ProbeSkeleton;
 
+import com.here.traffic.quality.correlation.ds.ConditionV2;
+import com.here.traffic.quality.correlation.ds.DensityBucket;
+import com.here.traffic.quality.correlation.ds.EpochTMC;
+import com.here.traffic.quality.correlation.ds.MarketV2;
+import com.here.traffic.quality.correlation.ds.MarketV3;
+import com.here.traffic.quality.correlation.ds.Probe;
 import com.here.traffic.quality.correlation.ds.TMC;
-import com.here.traffic.quality.correlation.ds.v2.ConditionV2;
-import com.here.traffic.quality.correlation.ds.v2.MarketV2;
-import com.here.traffic.quality.correlation.ds.v2.XAxisMetric;
-import com.here.traffic.quality.correlation.ds.v2.YAxisMetric;
-import com.here.traffic.quality.correlation.ds.v3.MarketV3;
-import com.here.traffic.quality.correlation.ds.v3.XYMetrics;
-import com.here.traffic.quality.correlation.ds.v4.EpochTMC;
-import com.here.traffic.quality.correlation.ds.v4.Probe;
-import com.here.traffic.quality.correlation.ds.v4.Probe.SOURCE;
-import com.here.traffic.quality.correlation.ds.v5.DensityBucket;
+import com.here.traffic.quality.correlation.ds.XAxisMetric;
+import com.here.traffic.quality.correlation.ds.XYMetrics;
+import com.here.traffic.quality.correlation.ds.YAxisMetric;
+import com.here.traffic.quality.correlation.ds.Probe.SOURCE;
 
 import org.apache.commons.lang3.*;;
 
@@ -244,11 +244,13 @@ public class CorrelationAnalysis {
 		String[] countries={"US"};//US, France
 		String[] engines={"HALO"};//"HTTM", "HALO"
 		String[] tableIDs={"107","108","109"};// "101","102","103" "128","129","130"
+		String[] markets={};
 		
 		FileWriter fw;
 		HashMap<String, TMC> tmcAttr=null;		
 				
 		try{
+			//for(String market: markets){
 			for(String tableID: tableIDs){
 				//parse ground truth files
 				for(String country: countries){

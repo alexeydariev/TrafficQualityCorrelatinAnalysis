@@ -1,4 +1,4 @@
-package com.here.traffic.quality.correlation.ds.v2;
+package com.here.traffic.quality.correlation.ds;
 
 public class YAxisMetric {
 	public double qualityScore; //just for one day
