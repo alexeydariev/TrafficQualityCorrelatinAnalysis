@@ -10,7 +10,30 @@ public class MarketV2 {
 	
 	public String date;
 	public HashSet<String> tmcs;
+	public HashSet<String> tables; //all tables of a market 
+	
 	public double miles;
+	
+	public MarketV2(String market, HashSet<String> tmcs){
+		name=market;
+		this.tmcs=tmcs;
+		for(String tmc: tmcs){
+			tables.add(tmc.substring(0, 3));
+		}
+	}
+	
+	public ArrayList<Integer> getBatchesIdxOfRawProbeFiles(){
+		ArrayList<Integer> batchesOfRawProbeFiles=new ArrayList<Integer>();
+		try{
+			for(String table: tables){
+				int tableID=Integer.parseInt(table);
+				batchesOfRawProbeFiles.add((tableID-100)/3);
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		return batchesOfRawProbeFiles;
+	}
 	
 	
 	//public Conditon conditon;
@@ -21,6 +44,7 @@ public class MarketV2 {
 		name=market;
 		this.date=date;
 		tmcs=new HashSet<String>();
+		tables=new HashSet<String>();
 		qualityMetrics=new HashMap<String, YAxisMetric>();
 		densityMetrics=new XAxisMetric();
 	}

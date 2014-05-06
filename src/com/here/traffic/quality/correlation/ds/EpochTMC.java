@@ -48,7 +48,7 @@ public class EpochTMC {
 	public EpochTMC(String date, String tmc, int epochIdx, double error, String condition, double groundTruthSpeed){
 		this(date, tmc, epochIdx);
 		this.error=error;
-		this.condition=condition;
+		this.condition=condition; //ENGINE_TYPE-TRAFFIC_CONDITION-HIGHWAY_FLAG
 		this.groundTruthSpeed=groundTruthSpeed;
 	}
 	

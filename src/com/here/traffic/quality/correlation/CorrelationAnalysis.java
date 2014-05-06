@@ -79,9 +79,13 @@ public class CorrelationAnalysis {
 		
 		//addProbeCntToMarketv3();
 		
-		v4OutputStatResults();
-		v4Attempt();
+		
+		v4OutputStatResults();//do the actual counting and output the attributes for each epoch-tmc pair
+		
+		v4Attempt();//take the output from v4OutputStatResults(), calculate the QS score and density for each density bucket
 	}
+	
+	
 	
 	
 	public void addProbeCntToMarketv3(){
@@ -134,6 +138,7 @@ public class CorrelationAnalysis {
 						fw.write('\n');
 					}
 				}
+				System.out.println("Epoch-TMC pairs info written to "+filepath); 
 				fw.close();
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -141,7 +146,8 @@ public class CorrelationAnalysis {
 	}
 	
 	
-	public int loadGroundTruthAndBuildEpochTMCs(String filePath, HashMap<String, EpochTMC> epochTMCs, String tableID, String engineType
+	public int loadGroundTruthAndBuildEpochTMCs(String filePath, HashMap<String, EpochTMC> epochTMCs, 
+			String tableOrMarket, HashMap<String, ArrayList<String>> marketsToTMCs, String engineType
 			, String date, String country){
 		String line;
 		int lineCnt=0;
@@ -152,7 +158,19 @@ public class CorrelationAnalysis {
 				lineCnt+=1;
 				String[] fields=line.split(",");
 				String tmc=fields[10];
-				if(tableID.length()>0&&!tmc.startsWith(tableID)) continue;
+				
+				if(tableOrMarket.length()>0){
+					if(marketsToTMCs!=null){//by market
+						if(!marketsToTMCs.get(tableOrMarket).contains(tmc)){
+							continue;
+						}
+					}else{//by table
+						if(!tmc.startsWith(tableOrMarket)){
+							continue;
+						}
+					}
+				}
+				
 				//get the epochIdx
 				//int epochIdx=Integer.parseInt(fields[8])/180; //each epoch is 3 minutes
 				
@@ -202,9 +220,35 @@ public class CorrelationAnalysis {
 		return lineCnt;
 	}
 	
-	public void parseRawProbleFile(String filePath, boolean spdFiltering, double spdFilterThrshold,
-		String tableID	){
+	public HashMap<String, ArrayList<String>> getMarketToTMCs(){
+		HashMap<String, String> tmcToMarket=loadTMCToMarket("A0", null, null); 
+		HashMap<String, ArrayList<String>> marketToTMCs=new HashMap<String, ArrayList<String>>();
+		for(String tmc: tmcToMarket.keySet()){
+			String market=tmcToMarket.get(tmc);
+			if(!marketToTMCs.containsKey(market)){
+				marketToTMCs.put(market, new ArrayList<String>());
+			}
+			marketToTMCs.get(market).add(tmc);
+		}
 		
+		String[] markets={"Seattle-Tacoma-Bellevue","New York-Newark-Jersey City",
+				"Anniston-Oxford-Jacksonville","Los Angeles-Long Beach-Anaheim",
+				"Boston-Cambridge-Newton","Washington-Arlington-Alexandria","San Francisco-Oakland-Hayward",
+				"Minneapolis-St. Paul-Bloomington","Chicago-Naperville-Elgin"};
+		/*for(String market: marketToTMCs.keySet()){
+			if(market.contains("Boston")||market.contains("Chicago")
+					||market.contains("Los")||market.contains("New York")
+					||market.contains("San Francisco")
+					||market.contains("Jacksonville")
+					||market.contains("Washington")
+					||market.contains("Seattle")
+					||market.contains("Minneapolis")){
+				System.out.print("\""+market+"\",");
+				//+marketToTMCs.get(market).size());
+			}
+		}*/
+		System.out.println("loaded tmc list for markets");
+		return marketToTMCs;
 	}
 	
 	public void v4OutputStatResults(){
@@ -212,8 +256,8 @@ public class CorrelationAnalysis {
 		SOURCE probeSource=SOURCE.ARCHIVE;
 		
 		/**
-			 * Specify constraints in order to extract specific tmc-epoches
-			 */
+		* Specify constraints in order to extract specific tmc-epoches
+		*/
 			boolean findTMCsFittingtheProfile=false;
 			int[] groundTruthSpdRange={55, 100};
 			int[] probeSpdStdRange={10, 30};
@@ -224,10 +268,13 @@ public class CorrelationAnalysis {
 			for(int i=0;i<densityRange.length;i++){
 				pairsFittingProfile.add(new ArrayList<EpochTMC>());
 			}
+		///////////////////////////////////////////////////////////////
 			
-		
+		/**
+		 * Hardcoded versions parameters
+		 */
 		boolean spdFiltering=false,
-				coutingWindowShifting=true;
+				coutingWindowShifting=false;
 		double spdFilterThrshold=0;//0,10
 		
 		if(spdFiltering&&coutingWindowShifting) analysisVersion="v5";
@@ -238,20 +285,44 @@ public class CorrelationAnalysis {
 				else analysisVersion="v7";
 			}
 		}
+		/////////////////////////////////////////////////////////////////////////
 		 
+		
+		/**
+		 * Generic parameters to specify input data sources
+		 */
 		//"20140320", "20131212","20131213","20140205",
 		String[] dates={"20140320"};//,};//"20131212","20131213","20131220","20140205"
 		String[] countries={"US"};//US, France
 		String[] engines={"HALO"};//"HTTM", "HALO"
+		
+		int byMarketOrTable=1;// positive: market; negative: table; 0: neither
 		String[] tableIDs={"107","108","109"};// "101","102","103" "128","129","130"
-		String[] markets={};
+		String[] markets={"Seattle-Tacoma-Bellevue","New York-Newark-Jersey City",
+				"Anniston-Oxford-Jacksonville","Los Angeles-Long Beach-Anaheim",
+				"Boston-Cambridge-Newton","Washington-Arlington-Alexandria","San Francisco-Oakland-Hayward",
+				"Minneapolis-St. Paul-Bloomington","Chicago-Naperville-Elgin"};
+		
+		///END of the setup of parameters
+		///Starting the process 
+		
+		HashMap<String, ArrayList<String>> marketToTMCs=null;
+		String[] marketsOrTables={};
+		if(byMarketOrTable>0){
+			marketsOrTables=markets;
+			marketToTMCs=getMarketToTMCs();
+		}
+		else{
+			if(byMarketOrTable<0) marketsOrTables=tableIDs;
+		}
 		
 		FileWriter fw;
 		HashMap<String, TMC> tmcAttr=null;		
-				
+	
+		
 		try{
-			//for(String market: markets){
-			for(String tableID: tableIDs){
+			
+			for(String marketOrTable: marketsOrTables){
 				//parse ground truth files
 				for(String country: countries){
 					int endingBatch=11;
@@ -274,7 +345,7 @@ public class CorrelationAnalysis {
 						
 							int lineCnt=0;
 							
-							lineCnt+=loadGroundTruthAndBuildEpochTMCs(groudtruthFilePath, epochTMCs, tableID, engineType, date, country);
+							lineCnt+=loadGroundTruthAndBuildEpochTMCs(groudtruthFilePath, epochTMCs, marketOrTable, marketToTMCs, engineType, date, country);
 							
 							/**
 							 * read raw probe data file and count
@@ -286,10 +357,14 @@ public class CorrelationAnalysis {
 								if(findTMCsFittingtheProfile)	startingBatch=1;
 								else startingBatch=0;
 								
-								if(tableID.length()>0){
-									startingBatch=(Integer.parseInt(tableID)-101)/3;
-									endingBatch=startingBatch+1;
+								if(byMarketOrTable<0){
+									String tableID=marketOrTable;
+									if(tableID.length()>0){
+										startingBatch=(Integer.parseInt(tableID)-101)/3;
+										endingBatch=startingBatch+1;
+									}
 								}
+								
 								for(int batch=startingBatch;batch<endingBatch;batch++){//TODO change this based on the country
 									String batchString=(3*batch+1)+","+(3*batch+2)+","+(3*batch+3);
 									if(country.equals("France")){
@@ -342,7 +417,21 @@ public class CorrelationAnalysis {
 											}
 											tmc+=fields[Constants.RAW_PROBE_IDX_TMC_POINT_LOC_CODE];
 											if(!tmcAttr.containsKey(tmc)) continue; //TMC table does not contains this tmc
-											if(tableID.length()>0&& !tmc.startsWith(tableID)) continue;
+											
+											/**
+											 * Filter by table or market
+											 */
+											if(byMarketOrTable!=0){
+												if(byMarketOrTable<0){//by table
+													String tableId=marketOrTable;
+													if(tableId.length()>0&& !tmc.startsWith(tableId)) continue;
+												}else{//by market
+													String market=marketOrTable;
+													if(!marketToTMCs.get(market).contains(tmc)){
+														continue;
+													}
+												}
+											}
 											
 											//DateFormat simpDateFormat=new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");//must be small letters
 											//Date systeTimestamp=simpDateFormat.parse(fields[Constants.RAW_PROBE_IDX_SAMPLE_DATE]);
@@ -494,8 +583,20 @@ public class CorrelationAnalysis {
 											//continue;
 										}
 										
-										if(tableID.length()>0&& !tmc.startsWith(tableID)) continue;
-										//System.out.println();
+										/**
+										 * Filter by table or market
+										 */
+										if(byMarketOrTable!=0){
+											if(byMarketOrTable<0){//by table
+												String tableId=marketOrTable;
+												if(tableId.length()>0&& !tmc.startsWith(tableId)) continue;
+											}else{//by market
+												String market=marketOrTable;
+												if(!marketToTMCs.get(market).contains(tmc)){
+													continue;
+												}
+											}
+										}
 										
 									
 										
@@ -580,8 +681,12 @@ public class CorrelationAnalysis {
 							ArrayList<EpochTMC> pairs;
 							String outputFilePath;
 							outputFilePath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_";
-							if(tableID.length()==0) outputFilePath+=country;
-							else outputFilePath+=tableID;
+							if(byMarketOrTable!=0){
+								if(byMarketOrTable<0) outputFilePath+=marketOrTable;//by table
+								else outputFilePath+=marketOrTable;
+							}else{
+								outputFilePath+=country;
+							}
 							if(probeSource==SOURCE.QML) outputFilePath+="_qml";
 							outputFilePath+=".csv";
 							pairs=new ArrayList<EpochTMC>();
@@ -757,21 +862,35 @@ public class CorrelationAnalysis {
 		SOURCE probeDataSource=SOURCE.ARCHIVE;
 		
 		String[] tableIDs={"107","108","109"};//"107""101","102","103" "128","129","130"  //produce results for a particular market, e.g. "107" means Chicago
+		String[] markets={"Seattle-Tacoma-Bellevue","New York-Newark-Jersey City",
+				"Anniston-Oxford-Jacksonville","Los Angeles-Long Beach-Anaheim",
+				"Boston-Cambridge-Newton","Washington-Arlington-Alexandria","San Francisco-Oakland-Hayward",
+				"Minneapolis-St. Paul-Bloomington","Chicago-Naperville-Elgin"};
+		int byMarketOrTable=1;// postive: market; negative: table; 0: neither
 		
+		HashMap<String, ArrayList<String>> marketToTMCs=null;
+		String[] marketsOrTables={};
+		if(byMarketOrTable>0){
+			marketsOrTables=markets;
+			marketToTMCs=getMarketToTMCs();
+		}
+		else{
+			if(byMarketOrTable<0) marketsOrTables=tableIDs;
+		}
 		
 		/**
 		 * data source parameters
 		 */
 		String[] dates={"20140320"};//,"20131220","20140205"};//"20131212","20131213","20131220","20140205"
 		String country="US";//US, France
-		analysisVersion="v6";//"v4","v5","v6"
+		analysisVersion="v4";//"v4","v5","v6"
 		boolean plotting=false;//true, false;
 		int minNOPairsInOneBucket=200; //default : 200
 	
 		HashMap<String, ArrayList<EpochTMC>> allPairs;
 		HashMap<String, TMC> tmcs=TMC.loadTMC(country);
 		
-		for(String tableID: tableIDs){
+		for(String marketOrTable: marketsOrTables){
 			/***
 			 * put pairs into different groups based on traffic conditions
 			 */
@@ -829,7 +948,9 @@ public class CorrelationAnalysis {
 				String filepath;
 				
 				//filepath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+country+".csv";
-				filepath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+tableID;
+				filepath=Constants.RESULT_DATA+analysisVersion+"/"+analysisVersion+"_"+date+"_"+marketOrTable;
+				
+				
 				if(probeDataSource==SOURCE.QML) filepath+="_qml";
 				filepath+=".csv";
 				System.out.println("Load result file "+filepath);
@@ -863,7 +984,11 @@ public class CorrelationAnalysis {
 				if(!trafficConditionDichotomy) outputFilePath+="_speed";
 				if(laneBased) outputFilePath+="_laneBased";
 				if(carpoolExpressLane) outputFilePath+="_specialLane";
-				if(tableID.length()>0) outputFilePath+="_"+tableID;
+				if(byMarketOrTable!=0){
+					if(byMarketOrTable<0) outputFilePath+="_"+marketOrTable;
+					else outputFilePath+="_"+marketOrTable.split("-")[0];					
+				}
+				
 				if(probeDataSource==SOURCE.QML) outputFilePath+="_qml";
 				if(minNOPairsInOneBucket!=200) outputFilePath+="_bucketsize="+minNOPairsInOneBucket;
 				outputFilePath+=".txt";
@@ -923,8 +1048,15 @@ public class CorrelationAnalysis {
 					
 					for(int pairIdx=0;pairIdx<epochTMCs.size();pairIdx++){					
 						EpochTMC epochTMC=epochTMCs.get(pairIdx);
-						if(tableID.length()>0){
-							if(!epochTMC.tmc.substring(0,3).equals(tableID))continue;
+						if(byMarketOrTable!=0){
+							if(byMarketOrTable<0){//by table
+								if(!epochTMC.tmc.substring(0,3).equals(marketOrTable))continue;
+							}else{//by market
+								if(!marketToTMCs.get(marketOrTable).contains(epochTMC.tmc)){
+									continue;
+								}
+							}
+							
 						}
 						
 						if(lastBucket.pairs.size()>=minNOPairsInOneBucket
@@ -1106,6 +1238,7 @@ public class CorrelationAnalysis {
 					System.out.println();
 						
 				}
+				System.out.println("Correlation results written to "+outputFilePath);
 				fw.close();
 				
 			}catch(Exception ex){
